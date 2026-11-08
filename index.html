@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b4f57">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Villas Ungasan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Ungasan palette: limestone cliffs, Indian Ocean, frangipani. One colour per villa, used everywhere. */
+:root{
+  --bg:#eef1ef; --surface:#ffffff; --surface-2:#e3e9e6; --ink:#1d2b2d; --muted:#5f6f70; --line:#d9e1de;
+  --ocean:#0b4f57; --ocean-2:#0e6670; --on-ocean:#e9f6f3; --on-ocean-muted:#9cc8c3;
+  --accent:#0e6670; --accent-ink:#fff; --accent-soft:#d3ece8;
+  --frangi:#f0b43c; --frangi-ink:#3a2a05; --frangi-soft:#fbecc8;
+  --warm:#b5532f; --warm-soft:#f7e2d8; --warn:#8a5a00; --warn-soft:#fbefd0; --danger:#b3261e;
+  --v1:#4fb7aa; --v2:#f0b43c; --v3:#d9668a; --v4:#7b8fe0;
+  --display:'Bricolage Grotesque','Plus Jakarta Sans',system-ui,sans-serif;
+  --r-lg:26px; --r:16px; --r-sm:12px;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0f1719; --surface:#172225; --surface-2:#1f2c2f; --ink:#e8f0ee; --muted:#93a5a5; --line:#26363a;
+    --ocean:#0a3a40; --ocean-2:#0d4a52; --accent:#5cc3b6; --accent-ink:#06201d; --accent-soft:#163b38;
+    --frangi-soft:#3a2f14; --warm:#ec8a63; --warm-soft:#3a2219; --warn:#e8b54c; --warn-soft:#352a12; --danger:#ff8a80; }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.45}
+body{min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--frangi);outline-offset:2px}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px 130px}
+
+/* ---- ocean band (the one bold element) ---- */
+.band{background:var(--ocean);color:var(--on-ocean);position:relative;padding-bottom:34px;
+  background-image:radial-gradient(120% 80% at 100% 0%, var(--ocean-2) 0%, transparent 60%)}
+.band .wave{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:30px;display:block}
+.band .wave path{fill:var(--bg)}
+header.top{padding:calc(env(safe-area-inset-top) + 12px) 16px 6px;display:flex;align-items:center;gap:10px;max-width:560px;margin:0 auto}
+.brand{font-family:var(--display);font-weight:700;letter-spacing:-.01em;font-size:17px;flex:1;display:flex;align-items:center;gap:9px}
+.brand svg{width:22px;height:22px;color:var(--frangi)}
+.hero{max-width:560px;margin:0 auto;padding:6px 16px 0}
+.hero h1{font-family:var(--display);font-size:34px;line-height:1.05;letter-spacing:-.03em;margin:14px 0 4px;font-weight:700}
+.hero .sub{color:var(--on-ocean-muted)}
+.hero .figure{font-family:var(--display);font-weight:700;font-size:44px;letter-spacing:-.035em;line-height:1;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.hero .figure small{font-size:18px;font-weight:600;letter-spacing:0;color:var(--on-ocean-muted);margin-left:4px}
+.lang{display:flex;background:rgba(255,255,255,.12);border-radius:999px;padding:3px}
+.lang button{border:0;background:none;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;color:var(--on-ocean-muted)}
+.lang button.on{background:var(--on-ocean);color:var(--ocean)}
+.iconbtn{border:0;background:var(--surface-2);color:var(--ink);width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none}
+.band .iconbtn{background:rgba(255,255,255,.12);color:var(--on-ocean)}
+
+/* month switcher inside the band */
+.monthbar{display:flex;align-items:center;gap:8px;margin-top:6px}
+.monthbar b{font-weight:600;font-size:15px;color:var(--on-ocean-muted);min-width:0;flex:1;text-align:center}
+
+/* villa spend bar */
+.vbar{display:flex;height:12px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.12);margin:16px 0 12px;gap:2px}
+.vbar span{display:block;height:100%}
+.vlegend{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+.vlegend button{border:0;background:none;color:inherit;text-align:left;padding:6px 0;display:flex;gap:9px;align-items:flex-start;border-radius:8px}
+.vlegend .nm{font-size:13px;color:var(--on-ocean-muted);display:block}
+.vlegend .vv{font-weight:700;font-variant-numeric:tabular-nums;display:block}
+.vlegend button.on .nm{color:var(--on-ocean)}
+.vdot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block;margin-top:5px}
+.vtag{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--ink)}
+.vtag .vdot{margin:0;width:8px;height:8px}
+
+/* ---- worker check-in disc ---- */
+.disc-wrap{display:flex;align-items:center;gap:18px;margin:18px 0 4px}
+.disc{width:132px;height:132px;border-radius:50%;border:0;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  background:var(--on-ocean);color:var(--ocean);font-weight:800;font-size:17px;box-shadow:0 0 0 8px rgba(255,255,255,.08),0 0 0 16px rgba(255,255,255,.04);
+  transition:transform .12s}
+.disc:active{transform:scale(.96)}
+.disc svg{width:34px;height:34px}
+.disc.out{background:var(--frangi);color:var(--frangi-ink)}
+.disc.done{background:transparent;color:var(--on-ocean);box-shadow:inset 0 0 0 2px rgba(255,255,255,.25)}
+.disc-info b{font-family:var(--display);font-size:26px;letter-spacing:-.02em;display:block;line-height:1.1}
+.disc-info span{color:var(--on-ocean-muted);font-size:14px}
+.days{display:grid;grid-template-columns:repeat(16,1fr);gap:5px;margin-top:10px}
+.days i{aspect-ratio:1;border-radius:50%;background:var(--surface-2);display:block}
+.days i.on{background:var(--accent)}
+.days i.today{box-shadow:0 0 0 2px var(--frangi)}
+.days i.future{background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
+
+/* ---- surfaces ---- */
+.card{background:var(--surface);border-radius:var(--r);padding:16px;margin-top:14px}
+h2{font-family:var(--display);font-size:20px;margin:26px 2px 0;letter-spacing:-.02em;font-weight:700}
+h1{font-family:var(--display);letter-spacing:-.03em}
+.sub{color:var(--muted);font-size:14px}
+.btn{border:0;border-radius:var(--r);padding:14px 18px;font-weight:700;background:var(--accent);color:var(--accent-ink);width:100%;font-size:16px}
+.btn.big{padding:20px;font-size:18px}
+.btn.warm{background:var(--frangi);color:var(--frangi-ink)}
+.btn.ghost{background:var(--surface-2);color:var(--ink)}
+.btn.small{width:auto;padding:9px 14px;font-size:14px;border-radius:var(--r-sm)}
+.btn.danger{background:none;color:var(--danger);box-shadow:inset 0 0 0 1px var(--line)}
+.btn:disabled{opacity:.55}
+.row{display:flex;gap:10px;align-items:center}
+.row > *{flex:1;min-width:0}
+label.f{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:14px 2px 6px}
+input.i,select.i,textarea.i{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-sm);padding:12px 13px;font-size:16px}
+input.i:focus,select.i:focus,textarea.i:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.chip{border:0;background:var(--surface);padding:8px 14px;border-radius:999px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:7px;box-shadow:inset 0 0 0 1px var(--line)}
+.chip.on{background:var(--ink);color:var(--bg);box-shadow:none}
+.status{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.pill.green{background:var(--accent-soft);color:var(--accent)} .pill.warm{background:var(--frangi-soft);color:var(--warn)}
+.pill.grey{background:var(--surface-2);color:var(--muted)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.big-num{font-family:var(--display);font-size:40px;font-weight:700;letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+.stat{display:flex;justify-content:space-between;align-items:end;gap:12px}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.list li:last-child{border-bottom:0}
+.list .grow{flex:1;min-width:0}
+.list .t{font-weight:650;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list .m{font-size:13px;color:var(--muted);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.amt{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;text-align:right}
+.check{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;flex:none;background:var(--surface)}
+.check.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.done .t{text-decoration:line-through;color:var(--muted)}
+.tabs{position:fixed;bottom:0;left:0;right:0;z-index:6;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+.tabs .in{display:flex;max-width:560px;width:100%}
+.tabs button{flex:1;border:0;background:none;padding:10px 4px 12px;font-size:12px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabs button.on{color:var(--accent)}
+.tabs svg{width:22px;height:22px}
+.fab{position:fixed;right:max(16px,calc(50% - 264px));bottom:calc(80px + env(safe-area-inset-bottom));z-index:7;border:0;border-radius:999px;background:var(--frangi);color:var(--frangi-ink);
+  padding:15px 22px 15px 18px;font-weight:800;box-shadow:0 10px 26px rgba(11,79,87,.28);display:flex;gap:9px;align-items:center;font-size:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.tile{background:var(--surface);border-radius:var(--r);padding:14px}
+.tile .k{font-size:13px;color:var(--muted);font-weight:600}
+.tile .v{font-family:var(--display);font-size:22px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.hero .tile{background:rgba(255,255,255,.08)} .hero .tile .k{color:var(--on-ocean-muted)}
+.empty{text-align:center;color:var(--muted);padding:28px 10px;font-size:15px}
+.err{background:var(--warm-soft);color:var(--warm);padding:11px 13px;border-radius:var(--r-sm);font-size:14px;margin-top:12px;font-weight:600}
+.note{background:var(--frangi-soft);color:var(--warn);padding:11px 13px;border-radius:var(--r-sm);font-size:14px;margin-top:12px}
+.filters{display:flex;gap:8px;overflow-x:auto;margin:16px -16px 0;padding:0 16px 2px;scrollbar-width:none}
+.filters .chip{flex:none}
+/* modal */
+.modal{position:fixed;inset:0;z-index:20;background:rgba(6,30,33,.5);display:flex;align-items:flex-end;justify-content:center;animation:fade .18s}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:94dvh;overflow:auto;border-radius:var(--r-lg) var(--r-lg) 0 0;padding:10px 16px calc(24px + env(safe-area-inset-bottom));animation:rise .22s cubic-bezier(.2,.8,.2,1)}
+.sheet::before{content:"";display:block;width:40px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 10px}
+.sheet .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px}
+.sheet .hd h3{margin:0;font-family:var(--display);font-size:22px;letter-spacing:-.02em}
+@keyframes fade{from{opacity:0}} @keyframes rise{from{transform:translateY(40px)}}
+@media (prefers-reduced-motion: reduce){ .modal,.sheet{animation:none} .disc{transition:none} }
+/* camera */
+.cam{position:fixed;inset:0;z-index:30;background:#000;display:flex;flex-direction:column}
+.cam video,.cam img{flex:1;width:100%;min-height:0;object-fit:cover;background:#000}
+.cam img{object-fit:contain}
+.cam .bar{display:flex;align-items:center;justify-content:space-around;padding:18px 16px calc(22px + env(safe-area-inset-bottom));background:#000;color:#fff;gap:12px}
+.shutter{width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.2)}
+.shutter:active{background:var(--frangi)}
+.cam .roundbtn{width:52px;height:52px;border-radius:50%;border:0;background:rgba(255,255,255,.15);color:#fff;display:grid;place-items:center}
+.cam .label{position:absolute;top:calc(env(safe-area-inset-top) + 14px);left:0;right:0;text-align:center;color:#fff;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.cam .opts{background:#000;padding:0 16px;color:#fff}
+.cam .opts .chip{background:#1d1d1d;color:#fff;box-shadow:none}
+.cam .opts .chip.on{background:#fff;color:#000}
+.spinner{width:22px;height:22px;border:3px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{display:flex;gap:12px;align-items:center;justify-content:center;padding:40px;color:var(--muted);font-weight:600}
+.thumbs{display:flex;gap:8px;margin-top:8px}
+.thumbs img{width:84px;height:84px;object-fit:cover;border-radius:var(--r-sm);background:var(--surface-2)}
+.invimg{width:100%;border-radius:var(--r);margin-top:10px;background:var(--surface-2);max-height:60vh;object-fit:contain}
+.toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:999px;font-weight:600;z-index:40;font-size:14px;max-width:90vw}
+/* login */
+.login-band{min-height:44dvh;display:flex;flex-direction:column;justify-content:space-between}
+.login-band header.top{width:100%}
+.login-band .hero{width:100%;padding-bottom:16px}
+.login-band .hero h1{font-size:44px;margin-top:0}
+.login{max-width:420px;margin:0 auto;padding:8px 20px 40px}
+.pin{letter-spacing:.5em;font-size:22px;text-align:center}
+.wk{cursor:pointer}
+.day{display:grid;grid-template-columns:76px 1fr auto;gap:8px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}
+.linkbtn{border:0;background:none;color:var(--accent);font-weight:700;padding:4px 0;font-size:14px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<input type="file" id="fileCam" accept="image/*" capture="environment" hidden>
+<input type="file" id="fileAny" accept="image/*,application/pdf" hidden>
+
+<script>
+/* ===================== CONFIG ===================== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbzQGD0IKS5c6Ha282got0zZ-Gk_oC8nHiBIXc943p5YO_bF8eFWE4CLJ2jT5I-YZHSidg/exec';   // ← paste your Apps Script /exec URL here, e.g. 'https://script.google.com/macros/s/AKfy.../exec'
+
+/* ===================== i18n ===================== */
+const T = {
+  en: {
+    signin:'Sign in', name:'Your name', pin:'PIN', wrong:'Wrong name or PIN', locked:'Too many tries. Wait 15 minutes.',
+    hello:'Hello', checkIn:'Check in', checkOut:'Check out', notIn:'Not checked in yet', inSince:'Checked in at',
+    dayDone:'Day complete', daysMonth:'Days worked this month', myTasks:'My tasks', noTasks:'No tasks right now 🎉',
+    takePhoto:'Take a photo at the villa to start', retake:'Retake', usePhoto:'Confirm', whichVilla:'Which villa are you at?',
+    camNeeded:'Camera access is needed. Allow the camera for this site in your browser settings, then try again.',
+    saving:'Saving…', savedIn:'Checked in ✓', savedOut:'Checked out ✓', logout:'Log out', changePin:'Change PIN',
+    due:'Due', oldPin:'Current PIN', newPin:'New PIN', save:'Save', cancel:'Cancel', pinChanged:'PIN changed ✓',
+    alreadyIn:'You already checked in today', alreadyOut:'You already checked out today', notInErr:'Check in first',
+    gpsNote:'Location is recorded with the photo', hours:'hours', checkInLbl:'CHECK-IN', checkOutLbl:'CHECK-OUT',
+    sessionExp:'Please sign in again', offline:'No connection. Try again.', villa:'Villa',
+    welcome:'Selamat datang', loginSub:'Sign in with your name and PIN'
+  },
+  id: {
+    signin:'Masuk', name:'Nama Anda', pin:'PIN', wrong:'Nama atau PIN salah', locked:'Terlalu banyak percobaan. Tunggu 15 menit.',
+    hello:'Halo', checkIn:'Absen masuk', checkOut:'Absen pulang', notIn:'Belum absen masuk', inSince:'Masuk jam',
+    dayDone:'Hari ini selesai', daysMonth:'Hari kerja bulan ini', myTasks:'Tugas saya', noTasks:'Tidak ada tugas 🎉',
+    takePhoto:'Ambil foto di vila untuk mulai', retake:'Ulangi', usePhoto:'Konfirmasi', whichVilla:'Anda di vila mana?',
+    camNeeded:'Akses kamera diperlukan. Izinkan kamera untuk situs ini di pengaturan browser, lalu coba lagi.',
+    saving:'Menyimpan…', savedIn:'Absen masuk ✓', savedOut:'Absen pulang ✓', logout:'Keluar', changePin:'Ganti PIN',
+    due:'Batas', oldPin:'PIN lama', newPin:'PIN baru', save:'Simpan', cancel:'Batal', pinChanged:'PIN diganti ✓',
+    alreadyIn:'Anda sudah absen masuk hari ini', alreadyOut:'Anda sudah absen pulang hari ini', notInErr:'Absen masuk dulu',
+    gpsNote:'Lokasi dicatat bersama foto', hours:'jam', checkInLbl:'MASUK', checkOutLbl:'PULANG',
+    sessionExp:'Silakan masuk lagi', offline:'Tidak ada koneksi. Coba lagi.', villa:'Vila',
+    welcome:'Selamat datang', loginSub:'Masuk dengan nama dan PIN Anda'
+  }
+};
+
+/* ===================== state & helpers ===================== */
+const store = {
+  get(k){ try{ return localStorage.getItem('vu_'+k) }catch(e){ return null } },
+  set(k,v){ try{ v==null ? localStorage.removeItem('vu_'+k) : localStorage.setItem('vu_'+k,v) }catch(e){} }
+};
+const S = { token: store.get('token'), user:null, config:null, lang: store.get('lang') || 'en', tab: 'expenses',
+  month: thisMonth(), villa:'', tasksFor:'' };
+const t = k => (T[S.lang]||T.en)[k] || T.en[k] || k;
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rp = n => (S.config && S.config.currency !== 'IDR' ? '' : 'Rp ') + new Intl.NumberFormat('id-ID').format(Math.round(Number(n)||0));
+function todayTz(){ return new Date().toLocaleDateString('en-CA',{timeZone:(S&&S.config&&S.config.timezone)||'Asia/Makassar'}) }
+function thisMonth(){ return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Makassar'}).slice(0,7) }
+function shiftMonth(m,delta){ let [y,mo]=m.split('-').map(Number); mo+=delta; while(mo<1){mo+=12;y--} while(mo>12){mo-=12;y++} return y+'-'+String(mo).padStart(2,'0') }
+function monthName(m){ const [y,mo]=m.split('-').map(Number); return new Date(y,mo-1,1).toLocaleDateString(S.lang==='id'?'id-ID':'en-GB',{month:'long',year:'numeric'}) }
+function fmtDate(d){ if(!d) return ''; const [y,m,dd]=String(d).slice(0,10).split('-').map(Number); return new Date(y,m-1,dd).toLocaleDateString(S.lang==='id'?'id-ID':'en-GB',{weekday:'short',day:'numeric',month:'short'}) }
+const hhmm = s => String(s||'').slice(11,16);
+function toast(msg){ const el=document.createElement('div'); el.className='toast'; el.textContent=msg; document.body.appendChild(el); setTimeout(()=>el.remove(),2600) }
+function apiUrl(){
+  const q = new URLSearchParams(location.search).get('api');
+  if (q) store.set('api', q);
+  return API_URL || q || store.get('api') || '';
+}
+async function api(action, data={}){
+  let res;
+  try{
+    res = await fetch(apiUrl(), { method:'POST', body: JSON.stringify(Object.assign({action, token:S.token}, data)) });
+  }catch(e){ throw new Error(t('offline')) }
+  const j = await res.json();
+  if(!j.ok){
+    if(j.error==='SESSION_EXPIRED'){ logout(true); throw new Error(t('sessionExp')) }
+    throw new Error(j.error);
+  }
+  return j.data;
+}
+function errText(e){
+  const m = String(e.message||e);
+  return ({BAD_LOGIN:t('wrong'),LOCKED:t('locked'),ALREADY_IN:t('alreadyIn'),ALREADY_OUT:t('alreadyOut'),NOT_IN:t('notInErr')})[m] || m;
+}
+const icon = {
+  camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  receipt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>',
+  people:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2 .8 3 3 3 6"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>',
+  key:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/></svg>',
+  menu:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>',
+  flip:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9a8 8 0 0 1 14-3l2 2M20 15a8 8 0 0 1-14 3l-2-2"/><path d="M20 4v4h-4M4 20v-4h4"/></svg>',
+  x:'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  flower:'<svg viewBox="0 0 24 24" fill="currentColor"><g transform="translate(12 12)"><ellipse rx="3.6" ry="7" transform="rotate(0) translate(0 -5.2)"/><ellipse rx="3.6" ry="7" transform="rotate(72) translate(0 -5.2)"/><ellipse rx="3.6" ry="7" transform="rotate(144) translate(0 -5.2)"/><ellipse rx="3.6" ry="7" transform="rotate(216) translate(0 -5.2)"/><ellipse rx="3.6" ry="7" transform="rotate(288) translate(0 -5.2)"/><circle r="2.4" fill="#b5532f"/></g></svg>',
+  leaf:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19l7-7"/></svg>'
+};
+const WAVE = '<svg class="wave" viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path d="M0 18 C 60 4 110 30 170 18 S 280 4 340 16 S 390 24 400 20 V30 H0 Z"/></svg>';
+const villaColor = id => { const i=(S.config?.villas||[]).findIndex(v=>v.id===String(id)); return ['var(--v1)','var(--v2)','var(--v3)','var(--v4)'][(i<0?0:i)%4] };
+const vdot = id => `<span class="vdot" style="background:${villaColor(id)}"></span>`;
+const vtag = id => `<span class="vtag">${vdot(id)}${esc(villaLabel(id))}</span>`;
+function bandHtml(inner){ return `<div class="band">${headerHtml()}<div class="hero" id="hero">${inner||''}</div>${WAVE}</div>` }
+const villaLabel = id => { const v=(S.config?.villas||[]).find(v=>v.id===String(id)); return v ? 'Villa '+v.id : (id?'Villa '+id:'') };
+function myVillas(){ const all=(S.config?.villas||[]).map(v=>v.id); if(!S.user) return []; if(S.user.role==='admin'||String(S.user.villas).toLowerCase()==='all') return all; return String(S.user.villas).split(/[,\s]+/).filter(v=>all.includes(v)) }
+
+/* ===================== boot / auth ===================== */
+async function boot(){
+  if(!apiUrl()) return renderNoApi();
+  if(!S.token) return renderLogin();
+  $('#app').innerHTML = '<div class="loading"><span class="spinner"></span></div>';
+  try{
+    const r = await api('me'); S.user=r.user; S.config=r.config; render();
+  }catch(e){ renderLogin() }
+}
+function logout(silent){
+  if(!silent && S.token) api('logout').catch(()=>{});
+  S.token=null; S.user=null; store.set('token',null); renderLogin();
+}
+function renderNoApi(){
+  $('#app').innerHTML = `<div class="login"><div class="logo">${icon.leaf}</div><h1>Almost there</h1>
+  <p class="sub">This page isn't connected to the Google backend yet. Paste the Web-app URL (ending in <b>/exec</b>) into <code>API_URL</code> in index.html, or paste it here for this device only.</p>
+  <input class="i" id="apiIn" placeholder="https://script.google.com/macros/s/…/exec"><div style="height:12px"></div>
+  <button class="btn" id="apiSave">Connect</button></div>`;
+  $('#apiSave').onclick = () => { const v=$('#apiIn').value.trim(); if(v){ store.set('api',v); boot() } };
+}
+function langToggle(){
+  return `<div class="lang"><button data-lang="en" class="${S.lang==='en'?'on':''}">EN</button><button data-lang="id" class="${S.lang==='id'?'on':''}">ID</button></div>`;
+}
+function renderLogin(){
+  $('#app').innerHTML = `<div class="band login-band"><header class="top"><div class="brand">${icon.flower}Villas Ungasan</div>${langToggle()}</header>
+    <div class="hero"><h1>${t('welcome')}</h1><div class="sub">${t('loginSub')}</div></div>${WAVE}</div>
+    <div class="login"><form id="lf"><label class="f">${t('name')}</label><input class="i" name="uname" autocomplete="username" autocapitalize="words" value="${esc(store.get('lastName')||'')}" required>
+    <label class="f">${t('pin')}</label><input class="i pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" required>
+    <div id="lerr"></div><div style="height:18px"></div><button class="btn" type="submit">${t('signin')}</button></form></div>`;
+  $('#lf').onsubmit = async ev => {
+    ev.preventDefault(); const f=ev.target, b=f.querySelector('button'); b.disabled=true; b.innerHTML='<span class="spinner"></span>';
+    try{
+      const r = await api('login',{name:f.uname.value.trim(), pin:f.pin.value});
+      S.token=r.token; S.user=r.user; S.config=r.config; store.set('token',r.token); store.set('lastName',r.user.name);
+      S.tab = 'expenses'; render();
+    }catch(e){ $('#lerr').innerHTML=`<div class="err">${esc(errText(e))}</div>`; b.disabled=false; b.textContent=t('signin') }
+  };
+}
+function render(){
+  if(!S.user) return renderLogin();
+  if(S.user.role==='worker') return renderWorker();
+  return renderOwner();
+}
+function headerHtml(){
+  return `<header class="top"><div class="brand">${icon.flower}Villas Ungasan</div>
+   ${langToggle()}<button class="iconbtn" id="menuBtn" aria-label="Menu">${icon.menu}</button></header>`;
+}
+function bindMenu(){
+  $('#menuBtn').onclick = () => openSheet(`<div class="hd"><h3>${esc(S.user.name)}</h3><button class="iconbtn" data-close>${icon.x}</button></div>
+    <p class="sub" style="margin-top:0">${esc(S.user.role)}${S.user.role!=='worker'?' · '+esc(myVillas().map(v=>'Villa '+v).join(', ')):''}</p>
+    <button class="btn ghost" id="cpBtn">${t('changePin')}</button><div style="height:10px"></div>
+    <button class="btn danger" id="loBtn">${t('logout')}</button>`, sh => {
+      sh.querySelector('#loBtn').onclick = () => { closeSheet(); logout() };
+      sh.querySelector('#cpBtn').onclick = () => changePinSheet();
+  });
+}
+function changePinSheet(){
+  openSheet(`<div class="hd"><h3>${t('changePin')}</h3><button class="iconbtn" data-close>${icon.x}</button></div>
+   <form id="cpf"><label class="f">${t('oldPin')}</label><input class="i pin" name="o" type="password" inputmode="numeric" required>
+   <label class="f">${t('newPin')} (4–8)</label><input class="i pin" name="n" type="password" inputmode="numeric" pattern="[0-9]{4,8}" required>
+   <div class="e"></div><div style="height:14px"></div><button class="btn">${t('save')}</button></form>`, sh => {
+    sh.querySelector('#cpf').onsubmit = async ev => { ev.preventDefault();
+      try{ await api('changePin',{oldPin:ev.target.o.value,newPin:ev.target.n.value}); closeSheet(); toast(t('pinChanged')) }
+      catch(e){ sh.querySelector('.e').innerHTML=`<div class="err">${esc(errText(e))}</div>` } };
+  });
+}
+
+/* ===================== sheets (modals) ===================== */
+function openSheet(html, bind){
+  closeSheet();
+  const m=document.createElement('div'); m.className='modal'; m.id='modal';
+  m.innerHTML=`<div class="sheet">${html}</div>`;
+  m.addEventListener('click', e => { if(e.target===m || e.target.closest('[data-close]')) closeSheet() });
+  document.body.appendChild(m); if(bind) bind(m.querySelector('.sheet')); return m.querySelector('.sheet');
+}
+function closeSheet(){ const m=$('#modal'); if(m) m.remove() }
+
+/* ===================== WORKER ===================== */
+async function renderWorker(){
+  if(!$('#w')){ $('#app').innerHTML = bandHtml(`<h1>${t('hello')}, ${esc(S.user.name)}</h1>${loadingHtml}`) + `<div class="wrap" id="w"></div>`; bindMenu() }
+  try{
+    const [st, tasks] = await Promise.all([api('myStatus'), api('listTasks')]);
+    S.status = st; drawWorker(st, tasks);
+  }catch(e){ $('#w').innerHTML=`<div class="err">${esc(errText(e))}</div>` }
+}
+function drawWorker(st, tasks){
+  const r = st.record, cam = icon.camera;
+  let disc, info;
+  if(!r){ disc=`<button class="disc" id="ciBtn">${cam}${t('checkIn')}</button>`; info=`<b>${t('notIn')}</b><span>${t('takePhoto')}</span>` }
+  else if(!r.checkOut){ disc=`<button class="disc out" id="coBtn">${cam}${t('checkOut')}</button>`;
+    info=`<span>${t('inSince')}</span><b>${hhmm(r.checkIn)}</b>${r.villa?`<span>${esc(villaLabel(r.villa))}</span>`:''}` }
+  else { disc=`<div class="disc done">${icon.check}${t('dayDone')}</div>`;
+    info=`<b>${hhmm(r.checkIn)}–${hhmm(r.checkOut)}</b><span>${r.hours!==''&&r.hours!=null?r.hours:0} ${t('hours')}${r.villa?', '+esc(villaLabel(r.villa)):''}</span>` }
+  $('#hero').innerHTML = `<h1>${t('hello')}, ${esc(S.user.name)}</h1><div class="sub">${fmtDate(st.today)}</div>
+    <div class="disc-wrap">${disc}<div class="disc-info">${info}</div></div>`;
+  const [y,mo] = st.today.split('-').map(Number), dim = new Date(y,mo,0).getDate(), worked = new Set(st.datesThisMonth||[]);
+  const dots = Array.from({length:dim},(_,i)=>{ const d=`${st.today.slice(0,8)}${String(i+1).padStart(2,'0')}`;
+    return `<i class="${worked.has(d)?'on':''} ${d===st.today?'today':''} ${d>st.today?'future':''}" title="${d}"></i>` }).join('');
+  $('#w').innerHTML = `
+    <div class="card"><div class="stat"><div><div style="font-weight:600">${t('daysMonth')}</div><div class="sub">${monthName(st.today.slice(0,7))}</div></div><div class="big-num">${st.daysThisMonth}</div></div>
+    <div class="days">${dots}</div></div>
+    <h2>${t('myTasks')}</h2>
+    <div class="card" style="padding:2px 16px">${tasks.length? `<ul class="list">${tasks.map(taskRow).join('')}</ul>` : `<div class="empty">${t('noTasks')}</div>`}</div>`;
+  const ci=$('#ciBtn'), co=$('#coBtn');
+  if(ci) ci.onclick = () => openCamera('in');
+  if(co) co.onclick = () => openCamera('out');
+  bindTaskToggles($('#w'), () => renderWorker());
+}
+function taskRow(tk){
+  const done = tk.status==='done';
+  const overdue = !done && tk.due && tk.due < todayTz();
+  const meta = [S.user.role!=='worker'?`<span>${esc(tk.worker)}</span>`:'', tk.villa?vtag(tk.villa):'',
+    tk.due?`<span style="${overdue?'color:var(--danger);font-weight:700':''}">${t('due')} ${fmtDate(tk.due)}</span>`:'', tk.notes?`<span>${esc(tk.notes)}</span>`:''].filter(Boolean).join('');
+  return `<li class="${done?'done':''}"><button class="check ${done?'on':''}" data-task="${esc(tk.id)}" data-st="${done?'open':'done'}" aria-label="${done?'Mark not done':'Mark done'}">${done?icon.check.replace('<svg','<svg width="16" height="16"'):''}</button>
+   <div class="grow"><div class="t">${esc(tk.title)}</div>${meta?`<div class="m">${meta}</div>`:''}</div>
+   ${S.user.role!=='worker'?`<button class="linkbtn" data-deltask="${esc(tk.id)}" style="color:var(--muted)" aria-label="Delete task">${icon.x}</button>`:''}</li>`;
+}
+function bindTaskToggles(root, refresh){
+  root.querySelectorAll('[data-task]').forEach(b => b.onclick = async () => {
+    b.disabled=true; b.classList.toggle('on');
+    try{ await api('setTaskStatus',{id:b.dataset.task,status:b.dataset.st}); refresh() }catch(e){ toast(errText(e)); refresh() }
+  });
+  root.querySelectorAll('[data-deltask]').forEach(b => b.onclick = async () => {
+    if(!confirm('Delete this task?')) return;
+    try{ await api('deleteTask',{id:b.dataset.deltask}); refresh() }catch(e){ toast(errText(e)) }
+  });
+}
+
+/* ---------- live camera (no gallery possible) ---------- */
+let camStream=null, camFacing='user', camGps=null;
+async function openCamera(kind){
+  camGps = null;
+  if(navigator.geolocation) navigator.geolocation.getCurrentPosition(p => camGps={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}, ()=>{}, {enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+  const el=document.createElement('div'); el.className='cam'; el.id='cam';
+  el.innerHTML = `<div class="label">${t('takePhoto')}</div><video playsinline autoplay muted></video>
+    <div class="bar"><button class="roundbtn" id="camX">${icon.x}</button><button class="shutter" id="snap" aria-label="photo"></button><button class="roundbtn" id="camFlip">${icon.flip}</button></div>`;
+  document.body.appendChild(el);
+  const video = el.querySelector('video');
+  const start = async () => {
+    if(camStream) camStream.getTracks().forEach(tr=>tr.stop());
+    try{
+      camStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:camFacing,width:{ideal:1280},height:{ideal:1280}},audio:false});
+      video.srcObject = camStream; await video.play().catch(()=>{});
+    }catch(e){ closeCamera(); openSheet(`<div class="hd"><h3>${t('takePhoto')}</h3><button class="iconbtn" data-close>${icon.x}</button></div><div class="err">${t('camNeeded')}</div>`) }
+  };
+  el.querySelector('#camX').onclick = closeCamera;
+  el.querySelector('#camFlip').onclick = () => { camFacing = camFacing==='user'?'environment':'user'; start() };
+  el.querySelector('#snap').onclick = () => {
+    if(!video.videoWidth) return;
+    const data = stampFrame(video, kind);
+    camStream.getTracks().forEach(tr=>tr.stop());
+    reviewPhoto(el, data, kind);
+  };
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ closeCamera(); return openSheet(`<div class="err">${t('camNeeded')}</div>`) }
+  start();
+}
+function stampFrame(video, kind){
+  const max=1024, s=Math.min(1, max/Math.max(video.videoWidth,video.videoHeight));
+  const c=document.createElement('canvas'); c.width=Math.round(video.videoWidth*s); c.height=Math.round(video.videoHeight*s);
+  const g=c.getContext('2d');
+  if(camFacing==='user'){ g.translate(c.width,0); g.scale(-1,1) }
+  g.drawImage(video,0,0,c.width,c.height); g.setTransform(1,0,0,1,0,0);
+  const tz=(S.config&&S.config.timezone)||undefined, now=new Date();
+  const stamp=`${S.user.name} · ${now.toLocaleDateString('en-CA',{timeZone:tz})} ${now.toLocaleTimeString('en-GB',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false})} · ${kind==='in'?'CHECK-IN':'CHECK-OUT'}`;
+  const fs=Math.max(16,Math.round(c.width/30)); g.font=`700 ${fs}px sans-serif`;
+  g.fillStyle='rgba(0,0,0,.55)'; g.fillRect(0,c.height-fs*2,c.width,fs*2);
+  g.fillStyle='#fff'; g.fillText(stamp, fs*.6, c.height-fs*.65);
+  return c.toDataURL('image/jpeg',0.8);
+}
+function reviewPhoto(el, dataUrl, kind){
+  el.innerHTML = `<div class="label">${kind==='in'?t('checkIn'):t('checkOut')}</div><img src="${dataUrl}" alt="">
+    <div class="bar"><button class="btn ghost" id="re" style="background:#222;color:#fff">${t('retake')}</button><button class="btn ${kind==='in'?'':'warm'}" id="ok">${t('usePhoto')}</button></div>`;
+  el.querySelector('#re').onclick = () => { closeCamera(); openCamera(kind) };
+  el.querySelector('#ok').onclick = async ev => {
+    const b=ev.currentTarget; b.disabled=true; b.innerHTML=`<span class="spinner"></span>`;
+    try{
+      await api(kind==='in'?'checkIn':'checkOut', {photo:dataUrl.split(',')[1], gps:camGps});
+      closeCamera(); toast(kind==='in'?t('savedIn'):t('savedOut')); renderWorker();
+    }catch(e){ b.disabled=false; b.textContent=t('usePhoto'); toast(errText(e)) }
+  };
+}
+function closeCamera(){ if(camStream) camStream.getTracks().forEach(tr=>tr.stop()); camStream=null; const c=$('#cam'); if(c) c.remove() }
+
+/* ===================== OWNER / ADMIN ===================== */
+function renderOwner(){
+  const tabs = [['expenses','Expenses',icon.receipt],['workers','Workers',icon.people],['tasks','Tasks',icon.list]];
+  if(S.user.role==='admin') tabs.push(['team','Team',icon.key]);
+  $('#app').innerHTML = bandHtml(loadingHtml) + `<div class="wrap" id="v"></div>
+   <nav class="tabs"><div class="in">${tabs.map(([k,l,ic])=>`<button data-tab="${k}" class="${S.tab===k?'on':''}">${ic}${l}</button>`).join('')}</div></nav>
+   ${S.tab==='expenses'?`<button class="fab" id="scanBtn">${icon.camera.replace('<svg','<svg width="22" height="22"')}Scan invoice</button>`:''}`;
+  bindMenu();
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.tab=b.dataset.tab; renderOwner() });
+  const sb=$('#scanBtn'); if(sb) sb.onclick = () => scanSheet();
+  ({expenses:viewExpenses, workers:viewWorkers, tasks:viewTasks, team:viewTeam})[S.tab]();
+}
+function monthBar(){ return `<div class="monthbar"><button class="iconbtn" data-m="-1" aria-label="Previous month">‹</button><b>${monthName(S.month)}</b><button class="iconbtn" data-m="1" aria-label="Next month">›</button></div>` }
+function bindMonth(redraw){ document.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { S.month=shiftMonth(S.month,+b.dataset.m); redraw() }) }
+const loadingHtml = '<div class="loading"><span class="spinner"></span></div>';
+
+/* ---------- expenses ---------- */
+const allVillas = () => (S.config?.villas||[]).map(v=>v.id);
+const ownerOf = id => ((S.config?.villas||[]).find(v=>v.id===String(id))||{}).owner||'';
+const money = (n, cur) => (cur && cur!=='IDR' ? esc(cur)+' '+new Intl.NumberFormat('id-ID').format(Number(n)||0) : rp(n));
+function groupRows(rows){
+  const m=new Map();
+  rows.forEach(r=>{ const g=m.get(r.groupId)||{groupId:r.groupId, rows:[], first:r}; g.rows.push(r); m.set(r.groupId,g) });
+  return [...m.values()];
+}
+async function viewExpenses(){
+  const v=$('#v'), hero=$('#hero'), villas=allVillas();
+  if(S.villa && !villas.includes(S.villa)) S.villa='';
+  hero.innerHTML = monthBar() + loadingHtml;
+  v.innerHTML = `<div class="filters"><button class="chip ${!S.villa?'on':''}" data-vf="">All villas</button>${villas.map(x=>`<button class="chip ${S.villa===x?'on':''}" data-vf="${x}">${vdot(x)}Villa ${x}</button>`).join('')}</div><div id="exl"></div>`;
+  bindMonth(viewExpenses);
+  v.querySelectorAll('[data-vf]').forEach(b => b.onclick = () => { S.villa=b.dataset.vf; viewExpenses() });
+  try{
+    const rows = await api('listExpenses',{month:S.month});
+    const tot = {}; rows.forEach(r => tot[r.villa]=(tot[r.villa]||0)+Number(r.amount||0));
+    const all = rows.reduce((a,r)=>a+Number(r.amount||0),0);
+    const shown = S.villa ? rows.filter(r=>r.villa===S.villa) : rows;
+    const figure = S.villa ? (tot[S.villa]||0) : all;
+    hero.innerHTML = monthBar() + `<div class="sub" style="margin-top:12px">${S.villa?'Spent on Villa '+S.villa:'Spent across all villas'}</div>
+      <div class="figure">${rp(figure)}</div>
+      <div class="vbar" role="img" aria-label="Spending per villa">${all>0?villas.map(x=>tot[x]?`<span style="flex:${tot[x]};background:${villaColor(x)};opacity:${!S.villa||S.villa===x?1:.3}"></span>`:'').join(''):''}</div>
+      <div class="vlegend">${villas.map(x=>`<button data-vf2="${x}" class="${S.villa===x?'on':''}">${vdot(x)}<span><span class="nm">Villa ${x}, ${esc(ownerOf(x))}</span><span class="vv">${rp(tot[x]||0)}</span></span></button>`).join('')}</div>`;
+    bindMonth(viewExpenses);
+    hero.querySelectorAll('[data-vf2]').forEach(t => t.onclick = () => { S.villa = S.villa===t.dataset.vf2 ? '' : t.dataset.vf2; viewExpenses() });
+    const groups = groupRows(shown);
+    const item = g => {
+      const r=g.first, shared=Number(r.invoiceTotal)!==Number(r.amount) || g.rows.length>1 || !!r.split;
+      const sv = r.split ? r.split.replace('Shared: ','').split(' / ').map(x=>x.split(' ')[0]) : [r.villa];
+      const dots = `<span class="vtag">${sv.map(vdot).join('')}${shared?`Shared by ${sv.length}`:'Villa '+esc(r.villa)}</span>`;
+      const amt = S.villa ? `<div class="amt">${money(r.amount,r.currency)}</div>${shared?`<div class="sub" style="font-size:12px;text-align:right">of ${money(r.invoiceTotal,r.currency)}</div>`:''}`
+                          : `<div class="amt">${money(r.invoiceTotal,r.currency)}</div>`;
+      return `<li class="wk" data-exp="${esc(g.groupId)}"><div class="grow"><div class="t">${esc(r.vendor||r.description||'Invoice')}</div>
+        <div class="m"><span>${fmtDate(r.date)}</span>${dots}<span>${esc(r.category)}</span></div></div><div>${amt}</div></li>`;
+    };
+    $('#exl').innerHTML = `<div class="card" style="padding:2px 16px">${groups.length?`<ul class="list">${groups.map(item).join('')}</ul>`
+        :`<div class="empty">No expenses${S.villa?' for Villa '+S.villa:''} in ${monthName(S.month)}.<br>Tap <b>Scan invoice</b> to add one.</div>`}</div>
+      ${shown.length?`<div style="margin-top:12px"><button class="btn ghost small" id="csvBtn">Download CSV</button></div>`:''}`;
+    $('#exl').querySelectorAll('[data-exp]').forEach(li => li.onclick = () => expenseDetail(li.dataset.exp));
+    const cb=$('#csvBtn'); if(cb) cb.onclick = () => downloadCsv(`expenses_${S.month}${S.villa?'_villa'+S.villa:''}.csv`,
+      [['Date','Villa','Owner','Vendor','Description','Category','Villa share','Invoice total','Currency','Split','Invoice no','Added by','Invoice file']]
+      .concat(shown.map(r=>[r.date,r.villa,r.owner,r.vendor,r.description,r.category,r.amount,r.invoiceTotal,r.currency,r.split,r.invoiceNo,r.uploadedBy,r.fileUrl])));
+  }catch(e){ $('#exl').innerHTML=`<div class="err">${esc(errText(e))}</div>`; hero.innerHTML=monthBar(); bindMonth(viewExpenses) }
+}
+async function expenseDetail(groupId){
+  const sh0 = openSheet(loadingHtml);
+  let rows; try{ rows = await api('getExpenseGroup',{groupId}) }catch(e){ sh0.innerHTML=`<div class="err">${esc(errText(e))}</div>`; return }
+  if(!rows.length){ closeSheet(); return viewExpenses() }
+  const r=rows[0], total=r.invoiceTotal===''?r.amount:r.invoiceTotal, shared=rows.length>1;
+  const canEdit = S.user.role==='admin' || S.user.role==='owner';
+  const sh = openSheet(`<div class="hd"><h3>${esc(r.vendor||'Invoice')}</h3><button class="iconbtn" data-close>${icon.x}</button></div>
+    <div class="big-num" style="font-size:30px;margin:6px 0">${money(total,r.currency)}</div>
+    <div class="sub">${fmtDate(r.date)} · ${esc(r.category)}</div>
+    <div class="card" style="padding:2px 16px;margin-top:12px"><ul class="list">${rows.map(x=>`<li>${vdot(x.villa)}<div class="grow"><div class="t">Villa ${esc(x.villa)}</div><div class="m">${esc(x.owner)}</div></div><div class="amt">${money(x.amount,x.currency)}</div></li>`).join('')}</ul></div>
+    ${r.description?`<p>${esc(r.description)}</p>`:''}${r.invoiceNo?`<div class="sub">Invoice no. ${esc(r.invoiceNo)}</div>`:''}${r.notes?`<div class="note">${esc(r.notes)}</div>`:''}
+    <div class="sub" style="margin-top:6px">Added by ${esc(r.uploadedBy)} · ${esc(String(r.createdAt).slice(0,16))}</div>
+    <div id="invimg">${r.fileId?loadingHtml:'<div class="empty">No invoice file</div>'}</div>
+    ${canEdit?`<div class="row" style="margin-top:14px"><button class="btn ghost" id="edE">Edit</button><button class="btn danger" id="delE">Delete</button></div>`:''}`);
+  if(r.fileId) api('getFile',{fileId:r.fileId}).then(f => {
+    const box=sh.querySelector('#invimg'); if(!box) return;
+    box.innerHTML = f.data ? `<img class="invimg" src="data:${f.mime};base64,${f.data}">` : `<a class="btn ghost" style="display:block;text-align:center;margin-top:10px;text-decoration:none" href="${esc(f.url)}" target="_blank">Open invoice (PDF)</a>`;
+  }).catch(e => { const box=sh.querySelector('#invimg'); if(box) box.innerHTML=`<div class="err">${esc(errText(e))}</div>` });
+  if(canEdit){
+    sh.querySelector('#edE').onclick = () => expenseForm({existing:rows, extracted:Object.assign({},r,{amount:total})});
+    sh.querySelector('#delE').onclick = async () => { if(!confirm(shared?'Delete this invoice for all villas it is shared with, and its file?':'Delete this expense and its invoice file?')) return;
+      try{ await api('deleteExpense',{groupId}); closeSheet(); toast('Deleted'); viewExpenses() }catch(e){ toast(errText(e)) } };
+  }
+}
+function scanSheet(){
+  const sh = openSheet(`<div class="hd"><h3>Add an invoice</h3><button class="iconbtn" data-close>${icon.x}</button></div>
+    <p class="sub" style="margin-top:0">You choose the villa — or split it between villas — on the next screen.</p>
+    <button class="btn big" id="sCam">${icon.camera.replace('<svg','<svg width="24" height="24" style="vertical-align:-5px;margin-right:8px"')}Take photo of invoice</button>
+    <div style="height:10px"></div><button class="btn ghost" id="sFile">Upload photo or PDF</button>
+    <div style="height:10px"></div><button class="linkbtn" id="sMan">Enter manually without a file</button>`);
+  const pick = inp => { inp.value=''; inp.onchange = () => inp.files[0] && processInvoice(inp.files[0]); inp.click() };
+  sh.querySelector('#sCam').onclick = () => pick($('#fileCam'));
+  sh.querySelector('#sFile').onclick = () => pick($('#fileAny'));
+  sh.querySelector('#sMan').onclick = () => expenseForm({extracted:{}, aiError:''});
+}
+async function processInvoice(file){
+  const sh = openSheet(`<div class="hd"><h3>Reading invoice…</h3></div><div class="loading"><span class="spinner"></span> This takes about 10 seconds</div>`);
+  try{
+    let payload;
+    if(file.type==='application/pdf'){
+      if(file.size > 15e6) throw new Error('PDF is too big (max 15 MB)');
+      payload = {mime:'application/pdf', data: await fileB64(file)};
+    } else payload = {mime:'image/jpeg', data: (await compressImage(file, 1800, .85)).split(',')[1]};
+    const preview = payload.mime==='image/jpeg' ? 'data:image/jpeg;base64,'+payload.data : null;
+    const r = await api('scanInvoice',{file:payload});
+    expenseForm({fileId:r.fileId, extracted:r.extracted||{}, aiError:r.aiError, preview});
+  }catch(e){ sh.innerHTML = `<div class="hd"><h3>Couldn't upload</h3><button class="iconbtn" data-close>${icon.x}</button></div><div class="err">${esc(errText(e))}</div>` }
+}
+/** Split a total equally. IDR in whole rupiah, other currencies in cents; leftover units go to the first villas. */
+function splitEqual(total, villas, cur){
+  const unit = (cur||'IDR').toUpperCase()==='IDR' ? 1 : 0.01;
+  const units = Math.round(total/unit), n=villas.length, base=Math.floor(units/n), rem=units-base*n;
+  return Object.fromEntries(villas.map((v,i)=>[v, Math.round((base+(i<rem?1:0))*unit*100)/100]));
+}
+function expenseForm({fileId, extracted, aiError, preview, existing, villas: presetVillas, groupId: presetGroup, title, note, after}){
+  const x = extracted||{}, cats=S.config.categories, villas=allVillas();
+  const aiMsg = aiError==='NO_AI_KEY' ? 'Automatic reading isn\'t switched on yet (no AI key) — please fill in the details.'
+    : aiError ? 'Couldn\'t read the invoice automatically — please fill in the details. ('+aiError.slice(0,120)+')'
+    : note ? note : existing ? '' : 'Filled in automatically — please check every field, especially the amount, before saving.';
+  // starting villa selection
+  let sel = existing ? existing.map(r=>String(r.villa)) : presetVillas ? presetVillas.slice() : (S.villa ? [S.villa] : (myVillas().length===1 ? myVillas() : []));
+  let custom = {};
+  let mode = 'equal';
+  if(existing && existing.length>1){
+    existing.forEach(r=>custom[r.villa]=r.amount);
+    const eq = splitEqual(Number(x.amount), sel, x.currency);
+    if(sel.some(v=>Math.abs(eq[v]-Number(custom[v]))>0.005)) mode='custom';
+  }
+  const sh = openSheet(`<div class="hd"><h3>${title?esc(title):existing?'Edit expense':'Check & save'}</h3><button class="iconbtn" data-close>${icon.x}</button></div>
+    ${aiMsg?`<div class="note">${esc(aiMsg)}</div>`:''}
+    ${preview?`<img class="invimg" src="${preview}" style="max-height:220px">`:''}
+    <form id="ef">
+    <div class="row"><div><label class="f">Date</label><input class="i" type="date" name="date" value="${esc(x.date||todayTz())}" required></div>
+    <div><label class="f">Invoice total (<span id="curLbl">${esc(x.currency||S.config.currency)}</span>)</label><input class="i" name="amount" inputmode="decimal" value="${x.amount!==undefined&&x.amount!==null&&x.amount!==''?esc(x.amount):''}" required></div></div>
+    <div class="sub" id="amtHint" style="margin:4px 2px 0"></div>
+    <label class="f">Which villa? Pick more than one to share the cost</label>
+    <div class="chips" id="vsel">${villas.map(v=>`<button type="button" class="chip" data-sv="${v}">${vdot(v)}Villa ${v}</button>`).join('')}<button type="button" class="chip" data-sv="*">All ${villas.length}</button></div>
+    <div id="splitBox"></div>
+    <label class="f">Vendor / shop</label><input class="i" name="vendor" value="${esc(x.vendor||'')}">
+    <label class="f">What was bought</label><input class="i" name="description" value="${esc(x.description||'')}">
+    <label class="f">Category</label><select class="i" name="category">${cats.map(c=>`<option ${c===x.category?'selected':''}>${esc(c)}</option>`).join('')}</select>
+    <div class="row"><div><label class="f">Invoice no.</label><input class="i" name="invoiceNo" value="${esc(x.invoiceNo||'')}"></div>
+    <div><label class="f">Currency</label><input class="i" name="currency" value="${esc(x.currency||S.config.currency)}"></div></div>
+    <label class="f">Notes</label><textarea class="i" name="notes" rows="2">${esc(x.notes||'')}</textarea>
+    <div class="e"></div><div style="height:16px"></div><button class="btn" type="submit">Save expense</button></form>`);
+  const f=sh.querySelector('#ef');
+  const total = () => parseAmount(f.amount.value);
+  const cur = () => (f.currency.value.trim()||S.config.currency);
+  const ordered = () => villas.filter(v=>sel.includes(v));
+  const shares = () => {
+    const vs=ordered(), t=total();
+    if(vs.length===1) return {[vs[0]]: t};
+    if(mode==='equal') return t>0 ? splitEqual(t, vs, cur()) : {};
+    return Object.fromEntries(vs.map(v=>[v, parseAmount(custom[v])]));
+  };
+  const drawChips = () => sh.querySelectorAll('[data-sv]').forEach(b => b.classList.toggle('on', b.dataset.sv==='*' ? sel.length===villas.length : sel.includes(b.dataset.sv)));
+  const drawSplit = () => {
+    const vs=ordered(), box=sh.querySelector('#splitBox'), t=total();
+    if(vs.length<2){ box.innerHTML = vs.length ? `<div class="sub" style="margin:8px 2px 0">Whole amount goes to Villa ${vs[0]} (${esc(ownerOf(vs[0]))}).</div>` : ''; return }
+    const s=shares();
+    box.innerHTML = `<div class="card" style="padding:12px 14px">
+      <div class="chips" style="margin:0 0 6px"><button type="button" class="chip ${mode==='equal'?'on':''}" data-mode="equal">Split equally</button><button type="button" class="chip ${mode==='custom'?'on':''}" data-mode="custom">Custom amounts</button></div>
+      ${vs.map(v=>`<div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)"><div>${vdot(v)} <b>Villa ${v}</b> <span class="sub">${esc(ownerOf(v))}</span></div>
+        <div style="flex:0 0 150px;text-align:right">${mode==='equal'?`<span class="amt">${t>0?money(s[v],cur()):'—'}</span>`:`<input class="i" style="padding:8px 10px;text-align:right" inputmode="decimal" data-share="${v}" value="${custom[v]!==undefined?esc(custom[v]):''}" placeholder="0">`}</div></div>`).join('')}
+      <div id="splitSum" class="sub" style="margin-top:8px"></div></div>`;
+    box.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
+      mode=b.dataset.mode;
+      if(mode==='custom' && vs.every(v=>custom[v]===undefined) && t>0){ const eq=splitEqual(t,vs,cur()); vs.forEach(v=>custom[v]=eq[v]) }
+      drawSplit();
+    });
+    box.querySelectorAll('[data-share]').forEach(inp => inp.oninput = () => { custom[inp.dataset.share]=inp.value; drawSum() });
+    drawSum();
+  };
+  const drawSum = () => {
+    const el=sh.querySelector('#splitSum'); if(!el) return;
+    const s=shares(), t=total(), sum=Object.values(s).reduce((a,b)=>a+(Number(b)||0),0);
+    if(!(t>0)){ el.textContent='Enter the invoice total first.'; return }
+    const diff=Math.round((t-sum)*100)/100;
+    el.innerHTML = Math.abs(diff)<0.005 ? `<span style="color:var(--accent);font-weight:700">✓ Shares add up to ${money(t,cur())}</span>`
+      : `<span style="color:var(--warm);font-weight:700">${diff>0?money(diff,cur())+' still to assign':money(-diff,cur())+' too much'}</span> · shares ${money(sum,cur())} of ${money(t,cur())}`;
+  };
+  sh.querySelectorAll('[data-sv]').forEach(b => b.onclick = () => {
+    const v=b.dataset.sv;
+    if(v==='*') sel = sel.length===villas.length ? [] : villas.slice();
+    else sel = sel.includes(v) ? sel.filter(x=>x!==v) : sel.concat(v);
+    drawChips(); drawSplit();
+  });
+  const hint=()=>{ const n=total(); sh.querySelector('#amtHint').textContent = n? '= '+money(n,cur()):''; sh.querySelector('#curLbl').textContent=cur() };
+  f.amount.oninput=()=>{ hint(); if(mode==='equal') drawSplit(); else drawSum() };
+  f.currency.oninput=()=>{ hint(); drawSplit() };
+  hint(); drawChips(); drawSplit();
+  f.onsubmit = async ev => { ev.preventDefault();
+    const err = m => { sh.querySelector('.e').innerHTML=`<div class="err">${esc(m)}</div>` };
+    const vs=ordered(), t=total(), s=shares();
+    if(!vs.length) return err('Pick the villa (or villas) this invoice is for.');
+    if(!(t>0)) return err('Enter the invoice total.');
+    const sum=Object.values(s).reduce((a,b)=>a+(Number(b)||0),0);
+    if(vs.some(v=>!(Number(s[v])>0))) return err('Every selected villa needs an amount above 0.');
+    if(Math.abs(sum-t)>0.005) return err('The villa shares must add up to the invoice total.');
+    const b=f.querySelector('button[type=submit]'); b.disabled=true; b.innerHTML='<span class="spinner"></span>';
+    const e={ groupId: (existing&&existing[0].groupId) || presetGroup || undefined, fileId, date:f.date.value, total:t, shares: vs.map(v=>({villa:v, amount:s[v]})),
+      vendor:f.vendor.value.trim(), description:f.description.value.trim(), category:f.category.value, invoiceNo:f.invoiceNo.value.trim(), currency:cur(), notes:f.notes.value.trim() };
+    try{ await api('saveExpense',{expense:e}); closeSheet(); toast(vs.length>1?`Saved · split between ${vs.length} villas ✓`:'Saved ✓'); S.month=e.date.slice(0,7); if(S.tab==='expenses') viewExpenses(); if(after) after() }
+    catch(e2){ b.disabled=false; b.textContent='Save expense'; err(errText(e2)) } };
+}
+
+/* ---------- workers / payroll ---------- */
+async function viewWorkers(){
+  const v=$('#v'), hero=$('#hero');
+  hero.innerHTML = monthBar() + loadingHtml; v.innerHTML = `<div id="wl"></div>`;
+  bindMonth(viewWorkers);
+  try{
+    const [rep, monthExp] = await Promise.all([api('monthlyReport',{month:S.month}), api('listExpenses',{month:S.month}).catch(()=>[])]); S.report=rep;
+    const salRows = monthExp.filter(r=>r.vendor==='Staff salaries');
+    const totPay = rep.workers.reduce((a,w)=>a+w.pay,0), totDays=rep.workers.reduce((a,w)=>a+w.days,0);
+    const missing = rep.workers.reduce((a,w)=>a+w.missingCheckOut,0);
+    hero.innerHTML = monthBar() + `<div class="sub" style="margin-top:12px">Salaries to pay</div><div class="figure">${rp(totPay)}</div>
+      <div class="sub">${totDays} day${totDays===1?'':'s'} worked by ${rep.workers.length} worker${rep.workers.length===1?'':'s'}${missing?`, ${missing} without check-out`:''}</div>
+      ${totPay>0||salRows.length?(()=>{ const rec=salRows.length?Object.fromEntries(salRows.map(r=>[r.villa,Number(r.amount)])):null;
+        const sp=rec||splitEqual(totPay, allVillas(), 'IDR');
+        const lbl=rec?`Saved in expenses${Math.abs(Number(salRows[0].invoiceTotal)-totPay)>0.005?` as ${rp(salRows[0].invoiceTotal)}, payroll now ${rp(totPay)}`:''}`:`Split equally between the ${allVillas().length} villas`;
+        return `<div class="sub" style="margin-top:14px">${lbl}</div>
+        <div class="vlegend" style="margin-top:4px">${allVillas().map(x=>`<div style="display:flex;gap:9px;padding:4px 0">${vdot(x)}<span><span class="nm">Villa ${x}, ${esc(ownerOf(x))}</span><span class="vv">${rp(sp[x]||0)}</span></span></div>`).join('')}</div>` })():''}`;
+    bindMonth(viewWorkers);
+    $('#wl').innerHTML = `<div class="card" style="padding:2px 16px;margin-top:6px">${rep.workers.length?`<ul class="list">${rep.workers.map(w=>`<li class="wk" data-wk="${esc(w.userId)}"><div class="grow"><div class="t">${esc(w.name)}</div>
+       <div class="m"><span>${w.hours} h</span><span>${w.dailyRate?rp(w.dailyRate)+' a day':'No daily rate set'}</span>${w.missingCheckOut?`<span class="pill warn">${w.missingCheckOut} without check-out</span>`:''}</div></div>
+       <div style="text-align:right"><div class="big-num" style="font-size:26px">${w.days}<span class="sub" style="font-family:inherit;font-weight:600;letter-spacing:0"> days</span></div>${w.dailyRate?`<div class="sub" style="font-weight:600">${rp(w.pay)}</div>`:''}</div></li>`).join('')}</ul>`
+       :`<div class="empty">No workers yet. ${S.user.role==='admin'?'Add them in the Team tab.':'Ask the admin to add them.'}</div>`}</div>
+     ${totPay>0?`<button class="btn ${salRows.length?'ghost':''}" id="recW" style="margin-top:14px">${salRows.length?'Change salaries in expenses':'Add salaries to expenses'}</button>
+       <p class="sub" style="margin:8px 4px 0">Saves one "Staff salaries" expense for ${monthName(rep.month)}, split equally between the villas unless you change the amounts.</p>`:''}
+     ${rep.workers.length?`<div style="margin-top:12px"><button class="btn ghost small" id="csvW">Download payroll CSV</button></div>`:''}`;
+    const rw=$('#recW'); if(rw) rw.onclick = () => recordSalaries(rep, totPay);
+    $('#wl').querySelectorAll('[data-wk]').forEach(li => li.onclick = () => workerDetail(rep.workers.find(w=>w.userId===li.dataset.wk)));
+    const cw=$('#csvW'); if(cw) cw.onclick = () => {
+      const rows=[['Worker','Month','Days worked','Hours','Days without check-out','Daily rate','Salary']].concat(rep.workers.map(w=>[w.name,rep.month,w.days,w.hours,w.missingCheckOut,w.dailyRate,w.pay]));
+      const sp=splitEqual(rep.workers.reduce((a,w)=>a+w.pay,0), allVillas(), 'IDR');
+      rows.push([]); rows.push(['Villa','Owner','Share of salaries']); allVillas().forEach(x=>rows.push(['Villa '+x, ownerOf(x), sp[x]||0]));
+      rows.push([]); rows.push(['Worker','Date','Check-in','Check-out','Hours','Note']);
+      rep.workers.forEach(w=>w.records.forEach(a=>rows.push([w.name,a.date,hhmm(a.checkIn),hhmm(a.checkOut),a.hours,a.note])));
+      downloadCsv(`payroll_${rep.month}.csv`, rows);
+    };
+  }catch(e){ $('#wl').innerHTML=`<div class="err">${esc(errText(e))}</div>` }
+}
+async function recordSalaries(rep, total){
+  const villas=allVillas();
+  const [y,m]=rep.month.split('-').map(Number), last=`${rep.month}-${String(new Date(y,m,0).getDate()).padStart(2,'0')}`;
+  const date = todayTz() < last ? todayTz() : last;
+  let existing=null;
+  try{ const r=(await api('listExpenses',{month:rep.month})).find(x=>x.vendor==='Staff salaries'); if(r) existing=await api('getExpenseGroup',{groupId:r.groupId}) }catch(e){}
+  const desc = rep.workers.filter(w=>w.days).map(w=>`${w.name} ${w.days} day${w.days===1?'':'s'}`).join(', ');
+  const base = {date, amount:total, vendor:'Staff salaries', description:desc, category:'Labour', currency:'IDR', notes:'Wages for '+monthName(rep.month)};
+  const same = existing && Math.abs(Number(existing[0].invoiceTotal)-total)<0.005;
+  expenseForm({
+    extracted: same ? Object.assign({}, existing[0], {amount:total}) : base,
+    existing: same ? existing : null,
+    groupId: existing ? existing[0].groupId : null,
+    villas: same ? null : villas,
+    title: `Salaries, ${monthName(rep.month)}`,
+    note: existing ? (same ? 'Already in expenses. Change the split if needed and save.'
+                           : `Already in expenses as ${rp(existing[0].invoiceTotal)}. Saving replaces it with ${rp(total)}.`)
+                   : 'Split equally between the villas. Choose "Custom amounts" if one villa pays more or less this month.',
+    after: () => { if(S.tab==='workers') viewWorkers() }
+  });
+}
+function workerDetail(w){
+  const today=todayTz();
+  const sh = openSheet(`<div class="hd"><h3>${esc(w.name)} · ${monthName(S.month)}</h3><button class="iconbtn" data-close>${icon.x}</button></div>
+   <div class="grid2" style="margin-top:4px"><div class="tile"><div class="k">Days worked</div><div class="v">${w.days}</div></div><div class="tile"><div class="k">Salary</div><div class="v">${w.dailyRate?rp(w.pay):'—'}</div></div></div>
+   <div style="margin-top:10px">${w.records.length?w.records.map(a=>`<div class="day"><b>${fmtDate(a.date)}</b>
+     <div>${hhmm(a.checkIn)} → ${a.checkOut?hhmm(a.checkOut):(a.date<today?'<span class="pill warn">no check-out</span>':'<span class="pill green">working</span>')}<div class="sub" style="font-size:12px">${[a.villa?villaLabel(a.villa):'',a.hours?a.hours+' h':'',a.note||''].filter(Boolean).map(esc).join(' · ')}</div></div>
+     <div style="display:flex;flex-direction:column;align-items:end">${(a.checkInPhotoId||a.checkOutPhotoId)?`<button class="linkbtn" data-ph="${esc(a.id)}">Photos</button>`:''}${!a.checkOut&&a.date<today?`<button class="linkbtn" data-fix="${esc(a.id)}">Set out</button>`:''}${S.user.role==='admin'?`<button class="linkbtn" style="color:var(--muted)" data-delatt="${esc(a.id)}">Delete</button>`:''}</div></div>
+     <div id="ph_${esc(a.id)}"></div>`).join(''):'<div class="empty">No days recorded this month.</div>'}</div>
+   <button class="btn ghost" id="addDay" style="margin-top:14px">+ Add a day manually</button>`);
+  sh.querySelectorAll('[data-ph]').forEach(b => b.onclick = async () => {
+    const a=w.records.find(r=>r.id===b.dataset.ph), box=sh.querySelector('#ph_'+a.id); box.innerHTML=loadingHtml;
+    try{ const imgs = await Promise.all([a.checkInPhotoId,a.checkOutPhotoId].filter(Boolean).map(id=>api('getFile',{fileId:id})));
+      box.innerHTML = `<div class="thumbs" style="margin-bottom:8px">${imgs.map(f=>`<img src="data:${f.mime};base64,${f.data}" onclick="this.style.width=this.style.width?'':'100%';this.style.height=this.style.height?'':'auto'">`).join('')}</div>${a.checkInGPS?`<a class="sub" target="_blank" href="https://maps.google.com/?q=${encodeURIComponent(a.checkInGPS.split(' ')[0])}">📍 Check-in location</a>`:''}`;
+    }catch(e){ box.innerHTML=`<div class="err">${esc(errText(e))}</div>` } });
+  sh.querySelectorAll('[data-fix]').forEach(b => b.onclick = async () => { const tm=prompt('Check-out time (HH:MM)','17:00'); if(!tm) return;
+    try{ await api('setCheckOut',{id:b.dataset.fix,time:tm}); closeSheet(); toast('Updated'); viewWorkers() }catch(e){ toast(errText(e)) } });
+  sh.querySelectorAll('[data-delatt]').forEach(b => b.onclick = async () => { if(!confirm('Delete this day?')) return;
+    try{ await api('deleteAttendance',{id:b.dataset.delatt}); closeSheet(); toast('Deleted'); viewWorkers() }catch(e){ toast(errText(e)) } });
+  sh.querySelector('#addDay').onclick = () => openSheet(`<div class="hd"><h3>Add a day · ${esc(w.name)}</h3><button class="iconbtn" data-close>${icon.x}</button></div>
+     <p class="sub">For days the worker couldn't check in (phone broken, etc.).</p><form id="adf">
+     <label class="f">Date</label><input class="i" type="date" name="date" required value="${today}">
+     <div class="row"><div><label class="f">In</label><input class="i" type="time" name="i" value="08:00"></div><div><label class="f">Out</label><input class="i" type="time" name="o" value="17:00"></div></div>
+     <label class="f">Reason</label><input class="i" name="note" placeholder="e.g. phone broken"><div class="e"></div><div style="height:14px"></div><button class="btn">Add day</button></form>`, s2 => {
+      s2.querySelector('#adf').onsubmit = async ev => { ev.preventDefault(); const f=ev.target;
+        try{ await api('addManualDay',{userId:w.userId,date:f.date.value,inTime:f.i.value,outTime:f.o.value,note:f.note.value}); closeSheet(); toast('Day added'); S.month=f.date.value.slice(0,7); viewWorkers() }
+        catch(e){ s2.querySelector('.e').innerHTML=`<div class="err">${esc(errText(e))}</div>` } };
+  });
+}
+
+/* ---------- tasks ---------- */
+async function viewTasks(){
+  const v=$('#v'); v.innerHTML=loadingHtml; $('#hero').innerHTML = `<h1>Tasks</h1>`;
+  try{
+    const [users, tasks] = await Promise.all([api('listUsers'), api('listTasks',{userId:S.tasksFor||undefined})]);
+    const workers = users.filter(u=>u.role==='worker'&&u.active);
+    const open = tasks.filter(x=>x.status!=='done').length;
+    $('#hero').innerHTML = `<h1>Tasks</h1><div class="sub">${open} open${S.tasksFor?' for '+esc((workers.find(w=>w.id===S.tasksFor)||{}).name||''):''}, done ones stay here for 7 days</div>`;
+    v.innerHTML = `<div class="row" style="margin-top:10px"><select class="i" id="tf"><option value="">All workers</option>${workers.map(w=>`<option value="${esc(w.id)}" ${S.tasksFor===w.id?'selected':''}>${esc(w.name)}</option>`).join('')}</select>
+      <button class="btn small" id="addT" style="flex:none">+ New task</button></div>
+      <div class="card" style="padding:2px 16px">${tasks.length?`<ul class="list">${tasks.map(taskRow).join('')}</ul>`:'<div class="empty">No tasks yet. Tap <b>New task</b> to give someone a job.</div>'}</div>`;
+    $('#tf').onchange = e => { S.tasksFor=e.target.value; viewTasks() };
+    $('#addT').onclick = () => {
+      if(!workers.length) return toast('Add workers first (Team tab)');
+      openSheet(`<div class="hd"><h3>New task</h3><button class="iconbtn" data-close>${icon.x}</button></div><form id="tkf">
+        <label class="f">Worker</label><select class="i" name="userId">${workers.map(w=>`<option value="${esc(w.id)}" ${S.tasksFor===w.id?'selected':''}>${esc(w.name)}</option>`).join('')}</select>
+        <label class="f">Task</label><input class="i" name="ttl" required placeholder="e.g. Clean the pool at 132">
+        <div class="row"><div><label class="f">Villa</label><select class="i" name="villa"><option value="">—</option>${S.config.villas.map(x=>`<option>${x.id}</option>`).join('')}</select></div>
+        <div><label class="f">Due</label><input class="i" type="date" name="due"></div></div>
+        <label class="f">Notes</label><input class="i" name="notes"><div class="e"></div><div style="height:14px"></div>
+        <div class="row"><button class="btn ghost" type="submit" name="more" value="1">Save & add another</button><button class="btn" type="submit">Save</button></div></form>`, sh => {
+          const f=sh.querySelector('#tkf'); let more=false;
+          f.querySelectorAll('button[type=submit]').forEach(b=>b.addEventListener('click',()=>{ more=!!b.value }));
+          f.onsubmit = async ev => { ev.preventDefault();
+            try{ await api('saveTask',{task:{userId:f.userId.value,title:f.ttl.value.trim(),villa:f.villa.value,due:f.due.value,notes:f.notes.value.trim()}});
+              toast('Task added'); if(more){ f.ttl.value=''; f.notes.value=''; f.ttl.focus() } else { closeSheet() } viewTasks() }
+            catch(e){ sh.querySelector('.e').innerHTML=`<div class="err">${esc(errText(e))}</div>` } };
+      });
+    };
+    bindTaskToggles(v, viewTasks);
+  }catch(e){ v.innerHTML=`<div class="err">${esc(errText(e))}</div>` }
+}
+
+/* ---------- team (admin) ---------- */
+async function viewTeam(){
+  const v=$('#v'); v.innerHTML=loadingHtml; $('#hero').innerHTML = `<h1>Team</h1>`;
+  try{
+    const users = await api('listUsers');
+    $('#hero').innerHTML = `<h1>Team</h1><div class="sub">Everyone signs in with their name and PIN</div>`;
+    const grp = r => users.filter(u=>u.role===r);
+    const sec = (title, list) => list.length?`<h2>${title}</h2><div class="card" style="padding:2px 16px"><ul class="list">${list.map(u=>`<li class="wk" data-u="${esc(u.id)}"><div class="grow"><div class="t">${esc(u.name)} ${u.active?'':'<span class="pill grey">inactive</span>'}</div>
+      <div class="m">${u.role==='worker'?(u.dailyRate?rp(u.dailyRate)+' / day':'No daily rate'):(u.role==='admin'?'Admin':'Owns '+String(u.villas).split(',').filter(Boolean).map(vtag).join(' '))}</div></div><span class="sub">Edit</span></li>`).join('')}</ul></div>`:'';
+    v.innerHTML = `<div style="margin-top:10px"><button class="btn" id="addU">+ Add person</button></div>` + sec('Workers',grp('worker')) + sec('Owners',grp('owner')) + sec('Admins',grp('admin'));
+    $('#addU').onclick = () => userForm({role:'worker',active:true});
+    v.querySelectorAll('[data-u]').forEach(li => li.onclick = () => userForm(users.find(u=>u.id===li.dataset.u)));
+  }catch(e){ v.innerHTML=`<div class="err">${esc(errText(e))}</div>` }
+}
+function userForm(u){
+  const villas=S.config.villas.map(v=>v.id);
+  const sel = new Set(String(u.villas||'').split(/[,\s]+/).filter(Boolean));
+  const sh = openSheet(`<div class="hd"><h3>${u.id?'Edit '+esc(u.name):'Add person'}</h3><button class="iconbtn" data-close>${icon.x}</button></div><form id="uf">
+    <label class="f">Name (used to sign in)</label><input class="i" name="uname" value="${esc(u.name||'')}" required>
+    <label class="f">Role</label><div class="chips">${['worker','owner','admin'].map(r=>`<button type="button" class="chip ${u.role===r?'on':''}" data-r="${r}">${r}</button>`).join('')}</div>
+    <div id="rateBox"><label class="f">Daily rate (${esc(S.config.currency)})</label><input class="i" name="dailyRate" inputmode="numeric" value="${esc(u.dailyRate||'')}" placeholder="e.g. 150000"></div>
+    <div id="villaBox"><label class="f">Villas they own (everyone can still see and add expenses for all villas)</label><div class="chips">${villas.map(x=>`<button type="button" class="chip ${sel.has(x)?'on':''}" data-vv="${x}">${x}</button>`).join('')}</div></div>
+    <label class="f">${u.id?'New PIN (leave empty to keep current)':'PIN (4–8 digits)'}</label><input class="i pin" name="pin" inputmode="numeric" pattern="[0-9]{4,8}" ${u.id?'':'required'} value="${u.id?'':String(Math.floor(100000+Math.random()*900000))}">
+    ${u.id?`<label class="f" style="display:flex;gap:10px;align-items:center"><input type="checkbox" name="active" ${u.active?'checked':''} style="width:20px;height:20px"> Active (can sign in)</label>`:''}
+    <div class="e"></div><div style="height:16px"></div><button class="btn" type="submit">Save</button></form>`);
+  let role=u.role;
+  const sync=()=>{ sh.querySelector('#rateBox').style.display = role==='worker'?'':'none'; sh.querySelector('#villaBox').style.display = role==='owner'?'':'none' }; sync();
+  sh.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{ role=b.dataset.r; sh.querySelectorAll('[data-r]').forEach(x=>x.classList.toggle('on',x===b)); sync() });
+  sh.querySelectorAll('[data-vv]').forEach(b=>b.onclick=()=>{ b.classList.toggle('on'); sel[b.classList.contains('on')?'add':'delete'](b.dataset.vv) });
+  sh.querySelector('#uf').onsubmit = async ev => { ev.preventDefault(); const f=ev.target;
+    const payload={ id:u.id, name:f.uname.value.trim(), role, villas: role==='owner'?[...sel].sort().join(','):(role==='admin'?'all':''),
+      dailyRate: role==='worker'?String(f.dailyRate.value).replace(/[^\d]/g,''):'', pin:f.pin.value, active: u.id? f.active.checked : true };
+    try{ await api('saveUser',{user:payload}); closeSheet();
+      if(payload.pin) alert(`${payload.name}'s PIN: ${payload.pin}\n\nGive it to them privately. They sign in with their name + PIN.`);
+      viewTeam() }
+    catch(e){ sh.querySelector('.e').innerHTML=`<div class="err">${esc(errText(e))}</div>` } };
+}
+
+/* ===================== utilities ===================== */
+function compressImage(file, max, q){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => { const s=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement('canvas');
+      c.width=Math.round(img.width*s); c.height=Math.round(img.height*s); c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg',q)) };
+    img.onerror = () => rej(new Error('Could not open that image'));
+    img.src = url;
+  });
+}
+function parseAmount(v){
+  const s=String(v||'').replace(/[^\d.,]/g,''); if(!s) return NaN;
+  if(/^\d{1,3}([.,]\d{3})+$/.test(s)) return Number(s.replace(/[.,]/g,''));
+  const m=s.match(/^(.*)[.,](\d{1,2})$/); if(m) return Number(m[1].replace(/[.,]/g,'')+'.'+m[2]);
+  return Number(s.replace(/[.,]/g,''));
+}
+function fileB64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(',')[1]); r.onerror=rej; r.readAsDataURL(file) }) }
+function downloadCsv(name, rows){
+  const csv = rows.map(r=>r.map(v=>{ v=v==null?'':String(v); return /[",\n;]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v }).join(',')).join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv'})); a.download=name; document.body.appendChild(a); a.click(); a.remove();
+}
+
+document.documentElement.lang = S.lang;
+boot();
+</script>
+</body>
+</html>
