@@ -12,6 +12,8 @@
  *   3. Project Settings → Script properties → add ANTHROPIC_API_KEY (or GEMINI_API_KEY)
  *      so invoices can be read automatically.
  *   4. Deploy → New deployment → Web app → Execute as: Me, Who has access: Anyone.
+ *
+ * To refresh the look of the Google Sheet (Overview tab, column titles, Rupiah amounts): run  formatSheets  once.
  *      Copy the /exec URL into the app's index.html (API_URL).
  */
 
@@ -81,15 +83,6 @@ function setup() {
       if (NUMERIC[c]) sh.getRange(2, ci + 1, rows, 1).setNumberFormat(NUMERIC[c]);
     });
   });
-  var sum = ss.insertSheet('Summary');
-  sum.getRange('A1').setValue('Expenses per month and villa (auto-updates)').setFontWeight('bold');
-  sum.getRange('A3').setFormula(
-    '=IFERROR(QUERY(Expenses!A1:S, "select C, sum(I) where D is not null group by C pivot D label C \'Month\'", 1), "No expenses yet")');
-  sum.getRange('A30').setValue('Total per villa (all time)').setFontWeight('bold');
-  sum.getRange('A32').setFormula(
-    '=IFERROR(QUERY(Expenses!A1:S, "select D, E, sum(I) where D is not null group by D, E label D \'Villa\', E \'Owner\', sum(I) \'Total\'", 1), "")');
-  sum.getRange('A60').setValue('Owner sheets: invoices are in Drive folder "' + SETUP.appName + ' – App / Invoices".');
-
   var root = DriveApp.createFolder(SETUP.appName + ' – App');
   var inv = root.createFolder('Invoices');
   SETUP.villas.forEach(function (v) { inv.createFolder(villaFolderName_(v)); });
@@ -112,6 +105,7 @@ function setup() {
   lines.push('==========================================================');
   lines.push('Sheet:  ' + ss.getUrl());
   lines.push('Folder: ' + root.getUrl());
+  formatSheets();
   lines.push('Next: add ANTHROPIC_API_KEY or GEMINI_API_KEY in Project Settings → Script properties, then Deploy → Web app.');
   Logger.log(lines.join('\n'));
 }
@@ -492,6 +486,234 @@ var ACTIONS = {
   }
 };
 
+// ============================== SHEET LAYOUT (readable for owners) ==============================
+/** Column titles people see in row 1. The app finds data by column position, so never move columns. */
+var LABELS = {
+  Users:      { id: 'ID', name: 'Name', role: 'Role', villas: 'Villas owned', dailyRate: 'Daily wage', active: 'Active',
+                pinHash: 'PIN (scrambled)', salt: 'PIN key', createdAt: 'Added on', mealAllowance: 'Daily meal allowance',
+                monthlyBonus: 'Monthly bonus', deductionPct: 'Deduction %' },
+  Expenses:   { id: 'ID', date: 'Date', month: 'Month', villa: 'Villa', owner: 'Owner', vendor: 'Vendor / shop',
+                description: 'What was bought', category: 'Category', amount: 'Villa share', currency: 'Currency',
+                invoiceNo: 'Invoice no.', fileUrl: 'Invoice file', fileId: 'File ID', uploadedBy: 'Added by',
+                createdAt: 'Added on', notes: 'Notes', groupId: 'Invoice group', invoiceTotal: 'Invoice total', split: 'Split between villas' },
+  Attendance: { id: 'ID', date: 'Date', month: 'Month', userId: 'Worker ID', worker: 'Worker', villa: 'Villa',
+                checkIn: 'Check-in', checkInPhotoUrl: 'Check-in photo', checkInPhotoId: 'Check-in photo ID', checkInGPS: 'Check-in location',
+                checkOut: 'Check-out', checkOutPhotoUrl: 'Check-out photo', checkOutPhotoId: 'Check-out photo ID',
+                checkOutGPS: 'Check-out location', hours: 'Hours', note: 'Note' },
+  Tasks:      { id: 'ID', userId: 'Worker ID', worker: 'Worker', title: 'Task', notes: 'Notes', villa: 'Villa', due: 'Due',
+                status: 'Status', createdBy: 'Given by', createdAt: 'Given on', doneAt: 'Done on' }
+};
+var HIDDEN = {
+  Expenses:   ['id', 'month', 'currency', 'fileId', 'groupId'],
+  Attendance: ['id', 'month', 'userId', 'villa', 'checkInPhotoId', 'checkOutPhotoId'],
+  Tasks:      ['id', 'userId']
+};
+var WIDTHS = { date: 95, villa: 60, owner: 80, vendor: 190, description: 260, category: 150, amount: 130, invoiceTotal: 130,
+  invoiceNo: 110, fileUrl: 220, uploadedBy: 90, createdAt: 140, notes: 240, split: 260, worker: 100, checkIn: 140, checkOut: 140,
+  checkInPhotoUrl: 200, checkOutPhotoUrl: 200, checkInGPS: 170, checkOutGPS: 170, hours: 70, note: 220, title: 260, due: 95,
+  status: 80, createdBy: 90, doneAt: 140 };
+var DATE_COLS = { Expenses: ['date'], Attendance: ['date'], Tasks: ['due'] };
+var MONEY = '"Rp "#,##0';
+var VILLA_COLORS = ['#4fb7aa', '#f0b43c', '#d9668a', '#7b8fe0'];
+var INK = '#1d2b2d', OCEAN = '#0b4f57', PALE = '#eef3f1';
+
+function label_(sheetName, key) { return (LABELS[sheetName] && LABELS[sheetName][key]) || key; }
+function colLetter_(sheetName, key) {
+  var n = COLS[sheetName].indexOf(key) + 1, s = '';
+  while (n > 0) { var m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+
+/**
+ * Makes the Google Sheet easy to read: an Overview tab with totals and a chart, clear column titles,
+ * Rupiah amounts (1.250.000), dd/mm/yyyy dates, hidden technical columns, filters and striped rows.
+ * Safe to run again at any time — it only changes the look, never the data.
+ */
+function formatSheets() {
+  var ss = ss_();
+  ss.setSpreadsheetLocale('en_US');            // write formulas in one known syntax…
+  ss.setSpreadsheetTimeZone(SETUP.timezone);
+
+  Object.keys(COLS).forEach(function (name) {
+    var sh = ss.getSheetByName(name), cols = COLS[name];
+    var maxRows = sh.getMaxRows(), last = sh.getLastRow();
+    sh.getRange(1, 1, 1, cols.length).setValues([cols.map(function (c) { return label_(name, c); })])
+      .setFontWeight('bold').setBackground(OCEAN).setFontColor('#ffffff').setVerticalAlignment('middle').setWrap(true);
+    sh.setRowHeight(1, 36);
+    sh.setFrozenRows(1);
+    (sh.getBandings() || []).forEach(function (b) { b.remove(); });
+    if (sh.getFilter()) sh.getFilter().remove();
+    var all = sh.getRange(1, 1, maxRows, cols.length);
+    all.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, true, false);
+    sh.getRange(1, 1, maxRows, cols.length).createFilter();
+    sh.getRange(2, 1, maxRows - 1, cols.length).setVerticalAlignment('top');
+    cols.forEach(function (c, i) {
+      if (WIDTHS[c]) sh.setColumnWidth(i + 1, WIDTHS[c]);
+      if (c === 'amount' || c === 'invoiceTotal' || c === 'dailyRate' || c === 'mealAllowance' || c === 'monthlyBonus')
+        sh.getRange(2, i + 1, maxRows - 1, 1).setNumberFormat(MONEY);
+      if (c === 'hours') sh.getRange(2, i + 1, maxRows - 1, 1).setNumberFormat('0.0');
+      if (c === 'description' || c === 'notes' || c === 'note' || c === 'split' || c === 'title')
+        sh.getRange(2, i + 1, maxRows - 1, 1).setWrap(true);
+      if ((HIDDEN[name] || []).indexOf(c) >= 0) sh.hideColumns(i + 1); else sh.showColumns(i + 1);
+    });
+    // real dates, shown as dd/mm/yyyy (existing text dates are converted)
+    (DATE_COLS[name] || []).forEach(function (c) {
+      var ci = cols.indexOf(c) + 1;
+      var r = sh.getRange(2, ci, maxRows - 1, 1);
+      var vals = last > 1 ? sh.getRange(2, ci, last - 1, 1).getValues() : [];
+      r.setNumberFormat('dd/mm/yyyy');
+      if (vals.length) sh.getRange(2, ci, vals.length, 1).setValues(vals.map(function (v) {
+        return [v[0] instanceof Date ? v[0] : String(v[0] || '')]; }));
+    });
+  });
+  var tabColors = { Expenses: '#0e6670', Attendance: '#f0b43c', Tasks: '#7b8fe0' };
+  Object.keys(tabColors).forEach(function (n) { ss.getSheetByName(n).setTabColor(tabColors[n]); });
+  ss.getSheetByName('Users').hideSheet();
+  var old = ss.getSheetByName('Summary'); if (old) ss.deleteSheet(old);
+
+  buildOverview_(ss);
+  ss.setSpreadsheetLocale('id_ID');            // …then show numbers as 1.250.000 and dates as dd/mm/yyyy
+  Logger.log('Done. Open the Sheet: ' + ss.getUrl());
+}
+
+function buildOverview_(ss) {
+  var old = ss.getSheetByName('Overview'); if (old) ss.deleteSheet(old);
+  var sh = ss.insertSheet('Overview', 0);
+  ss.setActiveSheet(sh); ss.moveActiveSheet(1);
+  sh.setTabColor(OCEAN);
+  sh.setHiddenGridlines(true);
+  var V = SETUP.villas, nV = V.length;
+  var E = function (key) { return 'Expenses!$' + colLetter_('Expenses', key) + '$2:$' + colLetter_('Expenses', key); };
+  var AMT = E('amount'), VIL = E('villa'), MON = E('month'), CAT = E('category'), OWN = E('owner');
+  // exact text matching (TO_TEXT) so ids like 131 and months like 2026-11 are never misread as numbers or dates
+  var sumWhere = function (conds) { return '=IFERROR(SUM(FILTER(' + AMT + ',' + conds.join(',') + ')),0)'; };
+  var isVilla = function (id) { return 'TO_TEXT(' + VIL + ')="' + id + '"'; };
+  var isMonth = function (cell) { return 'TO_TEXT(' + MON + ')=TO_TEXT(' + cell + ')'; };
+  var isOwner = function (o) { return 'TO_TEXT(' + OWN + ')="' + o + '"'; };
+  var lastCol = 2 + nV;                                  // A label, B..(villas), then total
+  sh.setColumnWidth(1, 210);
+  for (var c = 2; c <= lastCol + 1; c++) sh.setColumnWidth(c, 130);
+
+  var row = 1;
+  sh.getRange(row, 1).setValue(SETUP.appName + ' — Overview').setFontSize(20).setFontWeight('bold').setFontColor(OCEAN);
+  sh.setRowHeight(row, 40); row++;
+  sh.getRange(row, 1).setValue('Updates automatically from the Expenses tab. Amounts in Rupiah. Salaries appear as "Staff salaries" (category Labour).')
+    .setFontColor('#5f6f70'); row += 2;
+
+  // month picker
+  var MONTH_CELL = 'B' + row;
+  sh.getRange(row, 1).setValue('Month shown').setFontWeight('bold');
+  sh.getRange(row, 2).setNumberFormat('@').setFormula('=TEXT(TODAY(),"yyyy-mm")').setBackground('#fbecc8').setFontWeight('bold').setHorizontalAlignment('center');
+  sh.getRange(row, 3, 1, 3).merge().setValue('← type another month here, e.g. 2026-10').setFontColor('#5f6f70').setFontStyle('italic');
+  row += 2;
+
+  var section = function (title) {
+    sh.getRange(row, 1, 1, lastCol + 1).merge().setValue(title).setFontSize(13).setFontWeight('bold').setFontColor(INK)
+      .setBorder(null, null, true, null, null, null, OCEAN, SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+    sh.setRowHeight(row, 30); row++;
+  };
+  var header = function (cells) {
+    var r = sh.getRange(row, 1, 1, cells.length);
+    r.setValues([cells]).setFontWeight('bold').setBackground(PALE).setHorizontalAlignment('center');
+    sh.getRange(row, 1).setHorizontalAlignment('left'); row++;
+  };
+  var villaHeaderColors = function (r0, c0) {
+    V.forEach(function (v, i) { sh.getRange(r0, c0 + i).setBackground(VILLA_COLORS[i % 4]).setFontColor(i === 1 ? INK : '#ffffff'); });
+  };
+
+  // 1. per villa: selected month and since start
+  section('1. Spending per villa');
+  header(['Villa', 'Owner', 'Selected month', 'Since the start']);
+  var first = row;
+  V.forEach(function (v, i) {
+    sh.getRange(row, 1).setValue('Villa ' + v.id).setFontWeight('bold');
+    sh.getRange(row, 1).setBackground(VILLA_COLORS[i % 4]).setFontColor(i === 1 ? INK : '#ffffff');
+    sh.getRange(row, 2).setValue(v.owner);
+    sh.getRange(row, 3).setFormula(sumWhere([isVilla(v.id), isMonth(MONTH_CELL)]));
+    sh.getRange(row, 4).setFormula(sumWhere([isVilla(v.id)]));
+    row++;
+  });
+  sh.getRange(row, 1).setValue('All villas');
+  sh.getRange(row, 3).setFormula('=SUM(C' + first + ':C' + (row - 1) + ')');
+  sh.getRange(row, 4).setFormula('=SUM(D' + first + ':D' + (row - 1) + ')');
+  sh.getRange(row, 1, 1, 4).setFontWeight('bold').setBorder(true, null, null, null, null, null, INK, SpreadsheetApp.BorderStyle.SOLID);
+  sh.getRange(first, 3, row - first + 1, 2).setNumberFormat(MONEY);
+  row += 2;
+
+  // 2. per owner
+  section('2. Spending per owner');
+  header(['Owner', 'Villas', 'Selected month', 'Since the start']);
+  var owners = [];
+  V.forEach(function (v) { if (owners.indexOf(v.owner) < 0) owners.push(v.owner); });
+  first = row;
+  owners.forEach(function (o) {
+    var ids = V.filter(function (v) { return v.owner === o; }).map(function (v) { return v.id; });
+    sh.getRange(row, 1).setValue(o).setFontWeight('bold');
+    sh.getRange(row, 2).setValue(ids.join(' + '));
+    sh.getRange(row, 3).setFormula(sumWhere([isOwner(o), isMonth(MONTH_CELL)]));
+    sh.getRange(row, 4).setFormula(sumWhere([isOwner(o)]));
+    row++;
+  });
+  sh.getRange(first, 3, row - first, 2).setNumberFormat(MONEY);
+  row++;
+
+  // 3. by category for selected month
+  section('3. Selected month by category');
+  header(['Category'].concat(V.map(function (v) { return 'Villa ' + v.id; })).concat(['Total']));
+  villaHeaderColors(row - 1, 2);
+  first = row;
+  SETUP.categories.forEach(function (cat) {
+    sh.getRange(row, 1).setValue(cat);
+    V.forEach(function (v, i) {
+      sh.getRange(row, 2 + i).setFormula(sumWhere([isVilla(v.id), 'TO_TEXT(' + CAT + ')=$A' + row, isMonth(MONTH_CELL)]));
+    });
+    sh.getRange(row, 2 + nV).setFormula('=SUM(B' + row + ':' + colA1_(1 + nV) + row + ')').setFontWeight('bold');
+    row++;
+  });
+  sh.getRange(row, 1).setValue('Total');
+  for (var k = 0; k <= nV; k++) sh.getRange(row, 2 + k).setFormula('=SUM(' + colA1_(2 + k) + first + ':' + colA1_(2 + k) + (row - 1) + ')');
+  sh.getRange(row, 1, 1, nV + 2).setFontWeight('bold').setBorder(true, null, null, null, null, null, INK, SpreadsheetApp.BorderStyle.SOLID);
+  sh.getRange(first, 2, row - first + 1, nV + 1).setNumberFormat(MONEY);
+  // hide zero rows visually: grey out zeros
+  sh.getRange(first, 2, row - first, nV + 1).setFontColor(INK);
+  row += 2;
+
+  // 4. month by month (+ chart)
+  section('4. Month by month');
+  header(['Month'].concat(V.map(function (v) { return 'Villa ' + v.id; })).concat(['Total']));
+  villaHeaderColors(row - 1, 2);
+  var hdrRow = row - 1;
+  first = row;
+  var span = 36;                                         // three years of months
+  sh.getRange(first, 1, span, 1).setNumberFormat('@');
+  sh.getRange(row, 1).setFormula('=IFERROR(SORT(UNIQUE(FILTER(TO_TEXT(' + MON + '),TO_TEXT(' + MON + ')<>""))),"No expenses yet")');
+
+  var monthRows = [];
+  for (var r = first; r < first + span; r++) {
+    var cells = V.map(function (v) { return '=IF($A' + r + '="","",' + sumWhere([isVilla(v.id), isMonth('$A' + r)]).slice(1) + ')'; });
+    cells.push('=IF($A' + r + '="","",' + sumWhere([isMonth('$A' + r)]).slice(1) + ')');
+    monthRows.push(cells);
+  }
+  sh.getRange(first, 2, span, nV + 1).setFormulas(monthRows);
+  sh.getRange(first, 2, span, nV + 1).setNumberFormat(MONEY);
+  sh.getRange(first, 2 + nV, span, 1).setFontWeight('bold');
+
+  var chart = sh.newChart().setChartType(Charts.ChartType.COLUMN)
+    .addRange(sh.getRange(hdrRow, 1, span + 1, nV + 1))
+    .setNumHeaders(1)
+    .setOption('isStacked', true)
+    .setOption('title', 'Spending per month, per villa')
+    .setOption('legend', { position: 'bottom' })
+    .setOption('colors', VILLA_COLORS.slice(0, nV))
+    .setOption('vAxis', { format: 'short' })
+    .setOption('width', 620).setOption('height', 340)
+    .setPosition(hdrRow, nV + 4, 0, 0)
+    .build();
+  sh.insertChart(chart);
+  sh.setFrozenRows(0);
+}
+function colA1_(n) { var s = ''; while (n > 0) { var m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
+
 // ============================== AI INVOICE READING ==============================
 function readInvoiceWithAI_(b64, mime) {
   var props = PropertiesService.getScriptProperties();
@@ -566,9 +788,9 @@ function ensureSchema_() {
       var sh = sheet_(name), cols = COLS[name];
       var have = sh.getRange(1, 1, 1, cols.length).getValues()[0];
       for (var i = 0; i < cols.length; i++) {
-        if (have[i] === cols[i]) continue;
+        if (have[i] === cols[i] || have[i] === label_(name, cols[i])) continue;
         if (have[i] !== '' && have[i] !== undefined) throw new Error('Sheet "' + name + '" column ' + (i + 1) + ' is "' + have[i] + '", expected "' + cols[i] + '". Columns must not be moved.');
-        sh.getRange(1, i + 1).setValue(cols[i]).setFontWeight('bold').setBackground('#e8efe9');
+        sh.getRange(1, i + 1).setValue(label_(name, cols[i])).setFontWeight('bold').setBackground(OCEAN).setFontColor('#ffffff');
         sh.getRange(2, i + 1, sh.getMaxRows() - 1, 1).setNumberFormat(NUMERIC[cols[i]] || '@');
       }
     });
