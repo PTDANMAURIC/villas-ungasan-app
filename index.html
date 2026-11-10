@@ -320,6 +320,12 @@ function renderLogin(){
     }catch(e){ $('#lerr').innerHTML=`<div class="err">${esc(errText(e))}</div>`; b.disabled=false; b.textContent=t('signin') }
   };
 }
+document.addEventListener('click', e => {
+  const l = e.target.closest('[data-lang]'); if(!l) return;
+  S.lang = l.dataset.lang; store.set('lang', S.lang); document.documentElement.lang = S.lang;
+  if(!S.user) return renderLogin();
+  $('#app').innerHTML = ''; render();
+});
 function render(){
   if(!S.user) return renderLogin();
   if(S.user.role==='worker') return renderWorker();
