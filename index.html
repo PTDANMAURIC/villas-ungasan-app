@@ -682,34 +682,52 @@ async function viewWorkers(){
   try{
     const [rep, monthExp] = await Promise.all([api('monthlyReport',{month:S.month}), api('listExpenses',{month:S.month}).catch(()=>[])]); S.report=rep;
     const salRows = monthExp.filter(r=>r.vendor==='Staff salaries');
-    const totPay = rep.workers.reduce((a,w)=>a+w.pay,0), totDays=rep.workers.reduce((a,w)=>a+w.days,0);
+    // older backend (before pay settings) only sends dailyRate + pay
+    rep.workers.forEach(w => { if(w.net===undefined){ w.wage=w.pay||0; w.meal=0; w.bonus=0; w.gross=w.pay||0; w.deduction=0; w.net=w.pay||0; w.mealAllowance=0; w.monthlyBonus=0; w.deductionPct=0 } });
+    const totPay = rep.workers.reduce((a,w)=>a+w.net,0), totCost = rep.workers.reduce((a,w)=>a+w.gross,0), totDed = rep.workers.reduce((a,w)=>a+w.deduction,0), totDays=rep.workers.reduce((a,w)=>a+w.days,0);
     const missing = rep.workers.reduce((a,w)=>a+w.missingCheckOut,0);
-    hero.innerHTML = monthBar() + `<div class="sub" style="margin-top:12px">Salaries to pay</div><div class="figure">${rp(totPay)}</div>
+    hero.innerHTML = monthBar() + `<div class="sub" style="margin-top:12px">To pay the workers</div><div class="figure">${rp(totPay)}</div>
       <div class="sub">${totDays} day${totDays===1?'':'s'} worked by ${rep.workers.length} worker${rep.workers.length===1?'':'s'}${missing?`, ${missing} without check-out`:''}</div>
-      ${totPay>0||salRows.length?(()=>{ const rec=salRows.length?Object.fromEntries(salRows.map(r=>[r.villa,Number(r.amount)])):null;
-        const sp=rec||splitEqual(totPay, allVillas(), 'IDR');
-        const lbl=rec?`Saved in expenses${Math.abs(Number(salRows[0].invoiceTotal)-totPay)>0.005?` as ${rp(salRows[0].invoiceTotal)}, payroll now ${rp(totPay)}`:''}`:`Split equally between the ${allVillas().length} villas`;
+      ${totCost>0?`<div class="grid2"><div class="tile"><div class="k">Total cost</div><div class="v">${rp(totCost)}</div></div><div class="tile"><div class="k">Deductions (BPJS)</div><div class="v">${rp(totDed)}</div></div></div>`:''}
+      ${totCost>0||salRows.length?(()=>{ const rec=salRows.length?Object.fromEntries(salRows.map(r=>[r.villa,Number(r.amount)])):null;
+        const sp=rec||splitEqual(totCost, allVillas(), 'IDR');
+        const lbl=rec?`Total cost saved in expenses${Math.abs(Number(salRows[0].invoiceTotal)-totCost)>0.005?` as ${rp(salRows[0].invoiceTotal)}, payroll now ${rp(totCost)}`:''}`:`Total cost split equally between the ${allVillas().length} villas`;
         return `<div class="sub" style="margin-top:14px">${lbl}</div>
         <div class="vlegend" style="margin-top:4px">${allVillas().map(x=>`<div style="display:flex;gap:9px;padding:4px 0">${vdot(x)}<span><span class="nm">Villa ${x}, ${esc(ownerOf(x))}</span><span class="vv">${rp(sp[x]||0)}</span></span></div>`).join('')}</div>` })():''}`;
     bindMonth(viewWorkers);
     $('#wl').innerHTML = `<div class="card" style="padding:2px 16px;margin-top:6px">${rep.workers.length?`<ul class="list">${rep.workers.map(w=>`<li class="wk" data-wk="${esc(w.userId)}"><div class="grow"><div class="t">${esc(w.name)}</div>
-       <div class="m"><span>${w.hours} h</span><span>${w.dailyRate?rp(w.dailyRate)+' a day':'No daily rate set'}</span>${w.missingCheckOut?`<span class="pill warn">${w.missingCheckOut} without check-out</span>`:''}</div></div>
-       <div style="text-align:right"><div class="big-num" style="font-size:26px">${w.days}<span class="sub" style="font-family:inherit;font-weight:600;letter-spacing:0"> days</span></div>${w.dailyRate?`<div class="sub" style="font-weight:600">${rp(w.pay)}</div>`:''}</div></li>`).join('')}</ul>`
+       <div class="m"><span>${w.hours} h</span>${hasPay(w)?`<span>${rp(w.net)} to pay</span>`:'<span>Pay not set up</span>'}${w.missingCheckOut?`<span class="pill warn">${w.missingCheckOut} without check-out</span>`:''}</div></div>
+       <div style="text-align:right"><div class="big-num" style="font-size:26px">${w.days}<span class="sub" style="font-family:inherit;font-weight:600;letter-spacing:0"> days</span></div></div></li>`).join('')}</ul>`
        :`<div class="empty">No workers yet. ${S.user.role==='admin'?'Add them in the Team tab.':'Ask the admin to add them.'}</div>`}</div>
-     ${totPay>0?`<button class="btn ${salRows.length?'ghost':''}" id="recW" style="margin-top:14px">${salRows.length?'Change salaries in expenses':'Add salaries to expenses'}</button>
-       <p class="sub" style="margin:8px 4px 0">Saves one "Staff salaries" expense for ${monthName(rep.month)}, split equally between the villas unless you change the amounts.</p>`:''}
+     ${totCost>0?`<button class="btn ${salRows.length?'ghost':''}" id="recW" style="margin-top:14px">${salRows.length?'Change salaries in expenses':'Add salaries to expenses'}</button>
+       <p class="sub" style="margin:8px 4px 0">Saves the total cost (${rp(totCost)}, including deductions) as one "Staff salaries" expense for ${monthName(rep.month)}, split equally between the villas unless you change the amounts.</p>`:''}
      ${rep.workers.length?`<div style="margin-top:12px"><button class="btn ghost small" id="csvW">Download payroll CSV</button></div>`:''}`;
-    const rw=$('#recW'); if(rw) rw.onclick = () => recordSalaries(rep, totPay);
+    const rw=$('#recW'); if(rw) rw.onclick = () => recordSalaries(rep, totCost);
     $('#wl').querySelectorAll('[data-wk]').forEach(li => li.onclick = () => workerDetail(rep.workers.find(w=>w.userId===li.dataset.wk)));
     const cw=$('#csvW'); if(cw) cw.onclick = () => {
-      const rows=[['Worker','Month','Days worked','Hours','Days without check-out','Daily rate','Salary']].concat(rep.workers.map(w=>[w.name,rep.month,w.days,w.hours,w.missingCheckOut,w.dailyRate,w.pay]));
-      const sp=splitEqual(rep.workers.reduce((a,w)=>a+w.pay,0), allVillas(), 'IDR');
-      rows.push([]); rows.push(['Villa','Owner','Share of salaries']); allVillas().forEach(x=>rows.push(['Villa '+x, ownerOf(x), sp[x]||0]));
+      const rows=[['Worker','Month','Days worked','Hours','Days without check-out','Daily wage','Wage','Daily meal allowance','Meal allowance','Monthly bonus','Total cost','Deduction %','Deduction','To pay']]
+        .concat(rep.workers.map(w=>[w.name,rep.month,w.days,w.hours,w.missingCheckOut,w.dailyRate,w.wage,w.mealAllowance,w.meal,w.bonus,w.gross,w.deductionPct,w.deduction,w.net]));
+      rows.push(['Total','','','','','',rep.workers.reduce((a,w)=>a+w.wage,0),'',rep.workers.reduce((a,w)=>a+w.meal,0),rep.workers.reduce((a,w)=>a+w.bonus,0),totCost,'',totDed,totPay]);
+      const sp=salRows.length?Object.fromEntries(salRows.map(r=>[r.villa,Number(r.amount)])):splitEqual(totCost, allVillas(), 'IDR');
+      rows.push([]); rows.push(['Villa','Owner','Share of total cost']); allVillas().forEach(x=>rows.push(['Villa '+x, ownerOf(x), sp[x]||0]));
       rows.push([]); rows.push(['Worker','Date','Check-in','Check-out','Hours','Note']);
       rep.workers.forEach(w=>w.records.forEach(a=>rows.push([w.name,a.date,hhmm(a.checkIn),hhmm(a.checkOut),a.hours,a.note])));
       downloadCsv(`payroll_${rep.month}.csv`, rows);
     };
   }catch(e){ $('#wl').innerHTML=`<div class="err">${esc(errText(e))}</div>` }
+}
+const hasPay = w => !!(Number(w.dailyRate)||Number(w.mealAllowance)||Number(w.monthlyBonus));
+function payslipHtml(w){
+  if(!hasPay(w)) return `<div class="note">No pay set up for ${esc(w.name)}. ${S.user.role==='admin'?'Add their daily wage in the Team tab.':'Ask the admin to add it in the Team tab.'}</div>`;
+  const line = (label, amt, strong) => `<li><div class="grow" style="${strong?'font-weight:700':''}">${label}</div><div class="amt" style="${strong?'':'font-weight:600'}">${amt<0?'− '+rp(-amt):rp(amt)}</div></li>`;
+  return `<div class="card" style="padding:2px 16px;margin-top:8px"><ul class="list">
+    ${line(`Wage <span class="sub">${w.days} × ${rp(w.dailyRate)}</span>`, w.wage)}
+    ${w.mealAllowance?line(`Meal allowance <span class="sub">${w.days} × ${rp(w.mealAllowance)}</span>`, w.meal):''}
+    ${w.monthlyBonus?line(`Monthly bonus${!w.days?' <span class="sub">(no days worked)</span>':''}`, w.bonus):''}
+    ${line('Total cost', w.gross, true)}
+    ${w.deductionPct?line(`Deduction <span class="sub">${w.deductionPct}% of ${rp(w.gross)}</span>`, -w.deduction):''}
+    <li style="border-top:2px solid var(--ink)"><div class="grow" style="font-weight:800">To pay ${esc(w.name)}</div><div class="big-num" style="font-size:26px">${rp(w.net)}</div></li>
+  </ul></div>`;
 }
 async function recordSalaries(rep, total){
   const villas=allVillas();
@@ -718,7 +736,8 @@ async function recordSalaries(rep, total){
   let existing=null;
   try{ const r=(await api('listExpenses',{month:rep.month})).find(x=>x.vendor==='Staff salaries'); if(r) existing=await api('getExpenseGroup',{groupId:r.groupId}) }catch(e){}
   const desc = rep.workers.filter(w=>w.days).map(w=>`${w.name} ${w.days} day${w.days===1?'':'s'}`).join(', ');
-  const base = {date, amount:total, vendor:'Staff salaries', description:desc, category:'Labour', currency:'IDR', notes:'Wages for '+monthName(rep.month)};
+  const notes = 'Wages for '+monthName(rep.month)+'. Total cost incl. deductions: '+rep.workers.filter(w=>w.days).map(w=>`${w.name} ${rp(w.gross)} (pays ${rp(w.net)} + ${rp(w.deduction)} deducted)`).join('; ');
+  const base = {date, amount:total, vendor:'Staff salaries', description:desc, category:'Labour', currency:'IDR', notes};
   const same = existing && Math.abs(Number(existing[0].invoiceTotal)-total)<0.005;
   expenseForm({
     extracted: same ? Object.assign({}, existing[0], {amount:total}) : base,
@@ -735,7 +754,7 @@ async function recordSalaries(rep, total){
 function workerDetail(w){
   const today=todayTz();
   const sh = openSheet(`<div class="hd"><h3>${esc(w.name)} · ${monthName(S.month)}</h3><button class="iconbtn" data-close>${icon.x}</button></div>
-   <div class="grid2" style="margin-top:4px"><div class="tile"><div class="k">Days worked</div><div class="v">${w.days}</div></div><div class="tile"><div class="k">Salary</div><div class="v">${w.dailyRate?rp(w.pay):'—'}</div></div></div>
+   ${payslipHtml(w)}<h2 style="margin-top:20px">Days</h2>
    <div style="margin-top:10px">${w.records.length?w.records.map(a=>`<div class="day"><b>${fmtDate(a.date)}</b>
      <div>${hhmm(a.checkIn)} → ${a.checkOut?hhmm(a.checkOut):(a.date<today?'<span class="pill warn">no check-out</span>':'<span class="pill green">working</span>')}<div class="sub" style="font-size:12px">${[a.villa?villaLabel(a.villa):'',a.hours?a.hours+' h':'',a.note||''].filter(Boolean).map(esc).join(' · ')}</div></div>
      <div style="display:flex;flex-direction:column;align-items:end">${(a.checkInPhotoId||a.checkOutPhotoId)?`<button class="linkbtn" data-ph="${esc(a.id)}">Photos</button>`:''}${!a.checkOut&&a.date<today?`<button class="linkbtn" data-fix="${esc(a.id)}">Set out</button>`:''}${S.user.role==='admin'?`<button class="linkbtn" style="color:var(--muted)" data-delatt="${esc(a.id)}">Delete</button>`:''}</div></div>
@@ -802,7 +821,7 @@ async function viewTeam(){
     $('#hero').innerHTML = `<h1>Team</h1><div class="sub">Everyone signs in with their name and PIN</div>`;
     const grp = r => users.filter(u=>u.role===r);
     const sec = (title, list) => list.length?`<h2>${title}</h2><div class="card" style="padding:2px 16px"><ul class="list">${list.map(u=>`<li class="wk" data-u="${esc(u.id)}"><div class="grow"><div class="t">${esc(u.name)} ${u.active?'':'<span class="pill grey">inactive</span>'}</div>
-      <div class="m">${u.role==='worker'?(u.dailyRate?rp(u.dailyRate)+' / day':'No daily rate'):(u.role==='admin'?'Admin':'Owns '+String(u.villas).split(',').filter(Boolean).map(vtag).join(' '))}</div></div><span class="sub">Edit</span></li>`).join('')}</ul></div>`:'';
+      <div class="m">${u.role==='worker'?(hasPay(u)?[u.dailyRate?rp(u.dailyRate)+' a day':'',u.mealAllowance?'+ '+rp(u.mealAllowance)+' meal':'',u.monthlyBonus?'+ '+rp(u.monthlyBonus)+' bonus a month':'',u.deductionPct?'− '+u.deductionPct+'%':''].filter(Boolean).map(x=>`<span>${x}</span>`).join(''):'Pay not set up'):(u.role==='admin'?'Admin':'Owns '+String(u.villas).split(',').filter(Boolean).map(vtag).join(' '))}</div></div><span class="sub">Edit</span></li>`).join('')}</ul></div>`:'';
     v.innerHTML = `<div style="margin-top:10px"><button class="btn" id="addU">+ Add person</button></div>` + sec('Workers',grp('worker')) + sec('Owners',grp('owner')) + sec('Admins',grp('admin'));
     $('#addU').onclick = () => userForm({role:'worker',active:true});
     v.querySelectorAll('[data-u]').forEach(li => li.onclick = () => userForm(users.find(u=>u.id===li.dataset.u)));
@@ -814,7 +833,11 @@ function userForm(u){
   const sh = openSheet(`<div class="hd"><h3>${u.id?'Edit '+esc(u.name):'Add person'}</h3><button class="iconbtn" data-close>${icon.x}</button></div><form id="uf">
     <label class="f">Name (used to sign in)</label><input class="i" name="uname" value="${esc(u.name||'')}" required>
     <label class="f">Role</label><div class="chips">${['worker','owner','admin'].map(r=>`<button type="button" class="chip ${u.role===r?'on':''}" data-r="${r}">${r}</button>`).join('')}</div>
-    <div id="rateBox"><label class="f">Daily rate (${esc(S.config.currency)})</label><input class="i" name="dailyRate" inputmode="numeric" value="${esc(u.dailyRate||'')}" placeholder="e.g. 150000"></div>
+    <div id="rateBox"><div class="row"><div><label class="f">Daily wage (${esc(S.config.currency)})</label><input class="i" name="dailyRate" inputmode="numeric" value="${esc(u.dailyRate||'')}" placeholder="150000"></div>
+      <div><label class="f">Daily meal allowance</label><input class="i" name="mealAllowance" inputmode="numeric" value="${esc(u.mealAllowance||'')}" placeholder="23000"></div></div>
+      <div class="row"><div><label class="f">Monthly bonus</label><input class="i" name="monthlyBonus" inputmode="numeric" value="${esc(u.monthlyBonus||'')}" placeholder="0"></div>
+      <div><label class="f">Deduction %</label><input class="i" name="deductionPct" inputmode="decimal" value="${esc(u.deductionPct||'')}" placeholder="4"></div></div>
+      <p class="sub" style="margin:8px 2px 0">Wage and meal allowance are paid per day worked. The bonus is paid in full in any month they work. The deduction % is taken from everything paid.</p></div>
     <div id="villaBox"><label class="f">Villas they own (everyone can still see and add expenses for all villas)</label><div class="chips">${villas.map(x=>`<button type="button" class="chip ${sel.has(x)?'on':''}" data-vv="${x}">${x}</button>`).join('')}</div></div>
     <label class="f">${u.id?'New PIN (leave empty to keep current)':'PIN (4–8 digits)'}</label><input class="i pin" name="pin" inputmode="numeric" pattern="[0-9]{4,8}" ${u.id?'':'required'} value="${u.id?'':String(Math.floor(100000+Math.random()*900000))}">
     ${u.id?`<label class="f" style="display:flex;gap:10px;align-items:center"><input type="checkbox" name="active" ${u.active?'checked':''} style="width:20px;height:20px"> Active (can sign in)</label>`:''}
@@ -825,7 +848,10 @@ function userForm(u){
   sh.querySelectorAll('[data-vv]').forEach(b=>b.onclick=()=>{ b.classList.toggle('on'); sel[b.classList.contains('on')?'add':'delete'](b.dataset.vv) });
   sh.querySelector('#uf').onsubmit = async ev => { ev.preventDefault(); const f=ev.target;
     const payload={ id:u.id, name:f.uname.value.trim(), role, villas: role==='owner'?[...sel].sort().join(','):(role==='admin'?'all':''),
-      dailyRate: role==='worker'?String(f.dailyRate.value).replace(/[^\d]/g,''):'', pin:f.pin.value, active: u.id? f.active.checked : true };
+      dailyRate: role==='worker'?String(f.dailyRate.value).replace(/[^\d]/g,''):'',
+      mealAllowance: role==='worker'?String(f.mealAllowance.value).replace(/[^\d]/g,''):'',
+      monthlyBonus: role==='worker'?String(f.monthlyBonus.value).replace(/[^\d]/g,''):'',
+      deductionPct: role==='worker'?String(f.deductionPct.value).replace(',','.').replace(/[^\d.]/g,''):'', pin:f.pin.value, active: u.id? f.active.checked : true };
     try{ await api('saveUser',{user:payload}); closeSheet();
       if(payload.pin) alert(`${payload.name}'s PIN: ${payload.pin}\n\nGive it to them privately. They sign in with their name + PIN.`);
       viewTeam() }

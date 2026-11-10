@@ -33,8 +33,8 @@ var SETUP = {
     { name: 'Mauri', role: 'owner', villas: '131' },
     { name: 'Dani',  role: 'owner', villas: '132,133' },
     { name: 'Ric',   role: 'owner', villas: '134' },
-    { name: 'Elton', role: 'worker' },   // handyman / maintenance — set daily rate in the app (Team tab)
-    { name: 'Elsi',  role: 'worker' }    // cleaning & housekeeping
+    { name: 'Elton', role: 'worker', dailyRate: 150000, mealAllowance: 23000, monthlyBonus: 500000, deductionPct: 4 }, // handyman / maintenance
+    { name: 'Elsi',  role: 'worker', dailyRate: 150000, mealAllowance: 23000, monthlyBonus: 0, deductionPct: 4 }       // cleaning & housekeeping
     // More workers: add here before running setup, or later in the app (Team tab, admin only).
   ],
   categories: ['Materials', 'Labour', 'Furniture & equipment', 'Utilities', 'Cleaning', 'Pool & garden',
@@ -46,7 +46,8 @@ var GEMINI_MODEL_DEFAULT = 'gemini-2.5-flash';
 var SESSION_DAYS = 60;
 
 var COLS = {
-  Users:      ['id', 'name', 'role', 'villas', 'dailyRate', 'active', 'pinHash', 'salt', 'createdAt'],
+  Users:      ['id', 'name', 'role', 'villas', 'dailyRate', 'active', 'pinHash', 'salt', 'createdAt',
+               'mealAllowance', 'monthlyBonus', 'deductionPct'],
   Expenses:   ['id', 'date', 'month', 'villa', 'owner', 'vendor', 'description', 'category', 'amount',
                'currency', 'invoiceNo', 'fileUrl', 'fileId', 'uploadedBy', 'createdAt', 'notes',
                'groupId', 'invoiceTotal', 'split'],
@@ -54,7 +55,9 @@ var COLS = {
                'checkInGPS', 'checkOut', 'checkOutPhotoUrl', 'checkOutPhotoId', 'checkOutGPS', 'hours', 'note'],
   Tasks:      ['id', 'userId', 'worker', 'title', 'notes', 'villa', 'due', 'status', 'createdBy', 'createdAt', 'doneAt']
 };
-var NUMERIC = { amount: '#,##0.##', invoiceTotal: '#,##0.##', dailyRate: '#,##0', hours: '0.00' };
+var NUMERIC = { amount: '#,##0.##', invoiceTotal: '#,##0.##', dailyRate: '#,##0', mealAllowance: '#,##0', monthlyBonus: '#,##0',
+                deductionPct: '0.##', hours: '0.00' };
+var SCHEMA_VERSION = '3';
 
 // ============================== ONE-TIME SETUP ==============================
 function setup() {
@@ -97,11 +100,13 @@ function setup() {
 
   props.setProperty('SHEET_ID', ss.getId());
   props.setProperty('ROOT_FOLDER_ID', root.getId());
+  props.setProperty('SCHEMA_VERSION', SCHEMA_VERSION);
 
   var lines = ['', '======== STARTING PINs — hand these out privately ========'];
   SETUP.people.forEach(function (p) {
     var pin = randomPin_();
-    createUser_({ name: p.name, role: p.role, villas: p.villas || '', dailyRate: p.dailyRate || '', pin: pin });
+    createUser_({ name: p.name, role: p.role, villas: p.villas || '', dailyRate: p.dailyRate || '', mealAllowance: p.mealAllowance || '',
+                  monthlyBonus: p.monthlyBonus || '', deductionPct: p.deductionPct || '', pin: pin });
     lines.push(pad_(p.name, 12) + ' PIN ' + pin + '   (' + p.role + ')');
   });
   lines.push('==========================================================');
@@ -132,6 +137,7 @@ function doPost(e) {
     var req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     var fn = ACTIONS[req.action];
     if (!fn) throw new Error('Unknown action');
+    ensureSchema_();
     res = { ok: true, data: fn(req) };
   } catch (err) {
     res = { ok: false, error: String(err && err.message || err) };
@@ -390,9 +396,12 @@ var ACTIONS = {
           hours += Number(a.hours || 0);
           if (a.checkIn && !a.checkOut && a.date < today) missing++;
         });
-        var n = Object.keys(days).length, rate = Number(u.dailyRate || 0);
+        var n = Object.keys(days).length;
+        var p = payslip_(u, n);
         return { userId: u.id, name: u.name, days: n, hours: Math.round(hours * 100) / 100,
-                 missingCheckOut: missing, dailyRate: rate, pay: n * rate, records: recs };
+                 missingCheckOut: missing, dailyRate: p.dailyRate, mealAllowance: p.mealAllowance, monthlyBonus: p.monthlyBonus,
+                 deductionPct: p.deductionPct, wage: p.wage, meal: p.meal, bonus: p.bonus, gross: p.gross,
+                 deduction: p.deduction, net: p.net, pay: p.net, records: recs };
       });
     return { month: month, workers: out };
   },
@@ -470,6 +479,7 @@ var ACTIONS = {
         var ex = findUserById_(p.id);
         if (!ex) throw new Error('User not found');
         var patch = { name: p.name, role: p.role, villas: p.villas || '', dailyRate: p.dailyRate || '',
+                      mealAllowance: p.mealAllowance || '', monthlyBonus: p.monthlyBonus || '', deductionPct: p.deductionPct || '',
                       active: p.active === false ? 'FALSE' : 'TRUE' };
         if (p.pin) { var h = hashPin_(String(p.pin)); patch.pinHash = h.hash; patch.salt = h.salt; }
         updateRow_('Users', ex._row, patch);
@@ -532,6 +542,40 @@ function readInvoiceWithAI_(b64, mime) {
 }
 
 // ============================== HELPERS ==============================
+/**
+ * Monthly pay for one worker (contract: daily wage + daily meal allowance per day worked,
+ * a fixed monthly bonus if they worked at least one day, minus a % of everything paid).
+ * gross = total cost to the villas; net = what the worker receives. Rounded to the nearest rupiah.
+ */
+function payslip_(u, days) {
+  var rate = Number(u.dailyRate || 0), meal = Number(u.mealAllowance || 0), bonus = Number(u.monthlyBonus || 0),
+      pct = Number(u.deductionPct || 0);
+  var wage = days * rate, mealTotal = days * meal, bonusPaid = days > 0 ? bonus : 0;
+  var gross = wage + mealTotal + bonusPaid;
+  var deduction = Math.round(gross * pct / 100);
+  return { dailyRate: rate, mealAllowance: meal, monthlyBonus: bonus, deductionPct: pct,
+           wage: wage, meal: mealTotal, bonus: bonusPaid, gross: gross, deduction: deduction, net: gross - deduction };
+}
+
+/** Adds any new columns to a Sheet created by an older version of this script (runs once). */
+function ensureSchema_() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('SCHEMA_VERSION') === SCHEMA_VERSION) return;
+  withLock_(function () {
+    Object.keys(COLS).forEach(function (name) {
+      var sh = sheet_(name), cols = COLS[name];
+      var have = sh.getRange(1, 1, 1, cols.length).getValues()[0];
+      for (var i = 0; i < cols.length; i++) {
+        if (have[i] === cols[i]) continue;
+        if (have[i] !== '' && have[i] !== undefined) throw new Error('Sheet "' + name + '" column ' + (i + 1) + ' is "' + have[i] + '", expected "' + cols[i] + '". Columns must not be moved.');
+        sh.getRange(1, i + 1).setValue(cols[i]).setFontWeight('bold').setBackground('#e8efe9');
+        sh.getRange(2, i + 1, sh.getMaxRows() - 1, 1).setNumberFormat(NUMERIC[cols[i]] || '@');
+      }
+    });
+    props.setProperty('SCHEMA_VERSION', SCHEMA_VERSION);
+  });
+}
+
 function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 function ss_() { return SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID')); }
 function sheet_(name) { return ss_().getSheetByName(name); }
@@ -588,6 +632,7 @@ function createUser_(p) {
   var h = hashPin_(String(p.pin));
   appendObj_('Users', { id: id_(), name: String(p.name).trim(), role: p.role,
     villas: p.role === 'admin' ? 'all' : (p.villas || ''), dailyRate: p.dailyRate || '',
+    mealAllowance: p.mealAllowance || '', monthlyBonus: p.monthlyBonus || '', deductionPct: p.deductionPct || '',
     active: 'TRUE', pinHash: h.hash, salt: h.salt, createdAt: nowStamp_() });
 }
 function findUserByName_(name) {
@@ -596,7 +641,9 @@ function findUserByName_(name) {
 }
 function findUserById_(id) { return readTable_('Users').filter(function (u) { return u.id === id; })[0]; }
 function publicUser_(u) {
-  return { id: u.id, name: u.name, role: u.role, villas: String(u.villas || ''), dailyRate: u.dailyRate === '' ? '' : Number(u.dailyRate),
+  var num = function (v) { return v === '' || v === undefined ? '' : Number(v); };
+  return { id: u.id, name: u.name, role: u.role, villas: String(u.villas || ''), dailyRate: num(u.dailyRate),
+           mealAllowance: num(u.mealAllowance), monthlyBonus: num(u.monthlyBonus), deductionPct: num(u.deductionPct),
            active: isTrue_(u.active) };
 }
 function userVillas_(u) {
